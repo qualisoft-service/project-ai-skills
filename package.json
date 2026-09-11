@@ -39,6 +39,7 @@
     "bin/",
     "skills/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {

@@ -239,6 +239,17 @@ node skills/project-init/build.mjs selftest
 - **Node.js 18 이상** (`node -v`로 확인)
 - macOS · Linux · Windows. Windows는 링크 대신 복사로 자동 전환되며, 기능 차이는 없습니다
 
+## 변경 이력
+
+버전별 변경 내용은 [CHANGELOG.md](./CHANGELOG.md) 에 있습니다.
+
+**1.0.0 을 쓰고 계시면 재설치가 필요합니다** — 그 버전은 npx 캐시를 직접
+가리켜서, 캐시가 정리되면 스킬이 죽은 링크로 남습니다.
+
+```bash
+npx @qualisoft/ai-skills@latest install --force
+```
+
 ## 저장소 · 문의
 
 - 소스 — <https://github.com/qualisoft-service/project-ai-skills>
