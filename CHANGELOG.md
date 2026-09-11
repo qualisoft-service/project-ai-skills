@@ -10,6 +10,17 @@ npx @qualisoft/ai-skills@latest install --force
 
 > 직접 고친 스킬이 있으면 `--force` 가 그 디렉터리를 지웁니다. 먼저 백업하세요.
 
+> **`npx` 가 옛 버전을 실행하는 경우** — 과거에 `npm i -g @qualisoft/ai-skills` 로
+> 전역 설치를 한 적이 있으면, `npx` 는 레지스트리에서 최신을 받지 않고 **그 전역
+> 설치본을 그대로 실행합니다.** 버전을 확인하고, 낡았으면 전역 설치를 갱신하세요.
+>
+> ```bash
+> npm ls -g --depth=0 | grep qualisoft     # 전역 설치 버전 확인
+> npm i -g @qualisoft/ai-skills@latest     # 갱신
+> ```
+>
+> 전역 설치를 쓰지 않는다면 버전을 명시하면 확실합니다 — `npx @qualisoft/ai-skills@latest install`
+
 ### 고친 것
 
 **① npx 캐시를 직접 가리키던 문제** — 모든 플랫폼 해당
