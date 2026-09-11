@@ -63,10 +63,23 @@ npx @qualisoft/ai-skills list        # 스킬 설명 전문
 npx @qualisoft/ai-skills install --dry-run   # 바뀔 것만 미리 본다
 npx @qualisoft/ai-skills install --copy      # 링크 대신 복사 (Windows 기본)
 npx @qualisoft/ai-skills install --force     # 같은 이름 디렉터리를 덮어쓴다
+npx @qualisoft/ai-skills install --direct   # 저장소를 직접 가리킨다 (개발용)
 npx @qualisoft/ai-skills uninstall
 ```
 
 **같은 이름의 스킬이 이미 있으면 건너뜁니다.** 직접 고쳐 쓰던 스킬을 지우지 않기 위해서입니다. 바꿀 생각이면 백업하고 `--force`를 붙이세요.
+
+### Windows
+
+심볼릭 링크에 관리자 권한이 필요해 **복사로 자동 전환**됩니다(`--copy`가 기본). 복사본에는 `.qualisoft-ai-skills.json` 표식이 들어가고, 이걸로 소유를 판정합니다. 그래서 링크 환경과 똑같이 동작합니다 — 재설치는 `--force` 없이 갱신되고, `uninstall`도 정상 제거됩니다.
+
+> **1.0.0으로 설치하신 분은 다시 설치해 주세요.** 그 버전은 npx 캐시를 직접 가리켜서, 캐시가 정리되면 스킬이 죽은 링크로 남습니다. 표식도 없어 `uninstall` 이 자기 설치본을 알아보지 못합니다.
+>
+> ```bash
+> npx @qualisoft/ai-skills@latest install --force
+> ```
+>
+> 직접 고친 내용이 있으면 `--force` 가 그 디렉터리를 지우므로 먼저 백업하세요.
 
 ---
 
@@ -75,13 +88,18 @@ npx @qualisoft/ai-skills uninstall
 스킬의 실체는 **마크다운 지시문 + Node 스크립트**입니다. 도구마다 다른 것은 실행 방식이 아니라 **스킬을 발견하는 방식**뿐입니다. 그래서 설치기가 하는 일도 그 하나입니다.
 
 ```
-Claude Code · Codex          스킬 디렉터리를 직접 읽는다  →  심볼릭 링크만 걸면 끝
-                             ~/.claude/skills/<이름>/SKILL.md
+①  정본을 안정된 곳에 둔다
+    ~/.ai-skills/qualisoft/<이름>/
+    npx 캐시·node_modules 는 정리 대상이라 그 자리를 직접 가리키면
+    캐시가 비워질 때 스킬이 통째로 죽는다. 그래서 먼저 여기로 복사한다.
 
-Gemini · Cursor · 그 외       스킬 개념이 없다  →  공용 위치에 두고
-                             ~/.ai-skills/qualisoft/     지시문 파일에 목록을 적는다
-                             + GEMINI.md / AGENTS.md
+②  도구가 보는 곳에서 정본을 가리킨다
+    Claude Code · Codex   ~/.claude/skills/<이름>  →  링크 (Windows 는 복사)
+    Gemini · Cursor · 그 외  정본 경로를 지시문에 적는다
+                          GEMINI.md / .cursor/rules / AGENTS.md
 ```
+
+저장소를 클론해 개발할 때는 `--direct` 를 붙입니다. 복사를 건너뛰고 저장소를 직접 가리켜서, 고친 내용이 곧바로 반영됩니다.
 
 주입되는 블록은 표식으로 감싸여 있어(`<!-- qualisoft-ai-skills:begin -->`) **기존 지시문을 건드리지 않고** 그 부분만 갈아끼웁니다. `uninstall`은 블록만 빼고 나머지는 남깁니다.
 
@@ -193,12 +211,12 @@ Claude Code · Codex 에서는 `/project-init` 처럼 직접 호출할 수도 �
 
 ## 직접 고쳐 쓰기
 
-설치는 **심볼릭 링크**입니다. 저장소의 `skills/`를 고치면 모든 도구에 즉시 반영됩니다.
+`--direct` 로 설치하면 도구들이 저장소의 `skills/` 를 직접 가리킵니다. 고치면 즉시 반영됩니다.
 
 ```bash
 git clone https://github.com/qualisoft-service/project-ai-skills
 cd project-ai-skills
-node bin/cli.mjs install --tool=all --force
+node bin/cli.mjs install --tool=all --direct --force
 
 # skills/project-init/modules/*.json 을 고치면 곧바로 적용된다
 node skills/project-init/build.mjs selftest
@@ -219,7 +237,7 @@ node skills/project-init/build.mjs selftest
 ## 요구 사항
 
 - **Node.js 18 이상** (`node -v`로 확인)
-- macOS · Linux · Windows. Windows는 링크 대신 복사로 자동 전환됩니다
+- macOS · Linux · Windows. Windows는 링크 대신 복사로 자동 전환되며, 기능 차이는 없습니다
 
 ## 저장소 · 문의
 
