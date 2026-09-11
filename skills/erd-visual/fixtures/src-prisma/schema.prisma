@@ -1,0 +1,44 @@
+// Prisma 판독기 회귀용. 함정: 목록 관계(그리면 안 됨) · fields 없는 관계 · enum · @@map
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+enum Role { USER ADMIN }
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  posts     Post[]                     // 목록 — FK 는 반대편에 있다. 여기선 안 그린다
+  profile   Profile?                   // fields 없음 — 컬럼 특정 불가
+  @@map("users")
+}
+
+model Profile {
+  id     String @id @default(uuid())
+  bio    String?
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+}
+
+model Post {
+  id         String   @id @default(uuid())
+  title      String
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  tags       Tag[]
+}
+
+model Category {
+  id    String @id @default(uuid())
+  name  String
+  posts Post[]
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  name  String
+  posts Post[]
+}

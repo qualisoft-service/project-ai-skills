@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{제목}} — 발표자료 시안</title>
+<!--
+  발표자료 시안. 16:9, 1920×1080 기준으로 그리고 화면에서는 축소해 본다.
+  - 토큰은 ../tokens.css 한 곳
+  - 글자 최소: 제목 40px, 본문 24px (1920 기준). 뒷자리에서 읽혀야 한다
+  - 한 장 = 한 메시지. 두 주장이 들어가면 장을 나눈다
+  - 슬라이드는 보조다. 문장을 다 넣지 않는다
+  - 흑백 인쇄에서도 구분되는지 확인한다
+-->
+<link rel="stylesheet" href="../tokens.css">
+<style>
+body{background:#e9eaee; padding:36px 20px 90px; line-height:1.5}
+
+.deck{display:flex; flex-direction:column; align-items:center; gap:28px}
+.slide-wrap{width:min(100%, 1100px)}
+.slide-label{font-size:12px; color:var(--ink-muted); margin-bottom:6px}
+
+/* 1920×1080 을 그대로 그리고 컨테이너 폭에 맞춰 축소한다.
+   px 값을 1920 기준으로 쓸 수 있어 실제 크기 감각이 유지된다 */
+.slide{
+  width:1920px; height:1080px; transform-origin:top left;
+  background:var(--bg); position:relative; overflow:hidden;
+  box-shadow:0 10px 40px rgba(0,0,0,.16);
+  padding:110px 130px;
+}
+.slide-frame{position:relative; width:100%; aspect-ratio:16/9; overflow:hidden}
+.slide-frame .slide{position:absolute; top:0; left:0; scale:calc(1 / 1920 * 100vw)}
+@supports not (scale: 1){ .slide-frame .slide{transform:scale(.5729)} }
+
+.s-eyebrow{font-size:30px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 28px}
+.s-title{font-size:88px; line-height:1.12; letter-spacing:-.03em;
+  font-weight:700; margin:0 0 34px; max-width:22ch}
+.s-body{font-size:34px; line-height:1.55; color:var(--ink-secondary); max-width:40ch; margin:0}
+.s-note{position:absolute; left:130px; bottom:60px; font-size:24px; color:var(--ink-muted)}
+
+.s-cols{display:grid; grid-template-columns:repeat(3,1fr); gap:48px; margin-top:56px}
+.s-col h3{font-size:40px; margin:0 0 14px; font-weight:600}
+.s-col p{font-size:28px; line-height:1.5; color:var(--ink-secondary); margin:0}
+.s-rule{width:96px; height:6px; background:var(--accent); border-radius:3px; margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- 표지 -->
+  <div class="slide-wrap">
+    <div class="slide-label">1 · 표지</div>
+    <div class="slide-frame"><div class="slide">
+      <div class="s-rule"></div>
+      <p class="s-eyebrow">{{Eyebrow}}</p>
+      <h1 class="s-title">{{한 문장 메시지}}</h1>
+      <p class="s-body">{{보조 설명}}</p>
+      <p class="s-note">{{회사명}} · {{YYYY-MM-DD}}</p>
+    </div></div>
+  </div>
+
+  <!-- 본문 — 한 장 한 메시지 -->
+  <div class="slide-wrap">
+    <div class="slide-label">2 · 본문</div>
+    <div class="slide-frame"><div class="slide">
+      <p class="s-eyebrow">{{섹션명}}</p>
+      <h2 class="s-title" style="font-size:64px">{{이 장의 주장 하나}}</h2>
+      <div class="s-cols">
+        <div class="s-col"><h3>{{항목1}}</h3><p>{{설명}}</p></div>
+        <div class="s-col"><h3>{{항목2}}</h3><p>{{설명}}</p></div>
+        <div class="s-col"><h3>{{항목3}}</h3><p>{{설명}}</p></div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+
+<div class="mockup-flag">시안 · {{YYYY-MM-DD}}</div>
+</body>
+</html>

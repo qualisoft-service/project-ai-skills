@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시안 ↔ 구현 대조 — parity</title>
+<!--
+  시안 대조기. Docs/_build/parity.html
+
+  ── 왜 필요한가 ──
+  시안을 Tailwind 로 재작성하면 클래스 이름이 전부 달라진다.
+  그러면 "구현이 시안과 같은가"를 볼 방법이 사라진다.
+  시안은 여러 회차를 다듬은 결과물이라, 조용히 흐트러지면 그 작업이 통째로 날아간다.
+
+  ── 어떻게 짝을 맞추나 ──
+  선택자로는 못 맞춘다(클래스가 다르니까). 그래서 **표식**으로 맞춘다.
+  시안과 구현 양쪽에 같은 data-parity 이름을 달면 그 둘을 비교한다.
+
+      <header class="site-header" data-parity="header">        ← 시안
+      <header data-parity="header" className="fixed z-50 …">   ← 구현
+
+  클래스가 달라도 된다. 그게 재작성을 허용하면서 값을 지키는 방법이다.
+
+  ── 무엇을 비교하나 ──
+  색(합성) · 타이포 · 모서리 · 여백 · 너비. 높이는 내용이 만드는 값이라 참고로만 낸다.
+  **위치는 비교하지 않는다** — 레이아웃이 조금 다른 건 정상일 수 있고,
+  전부 틀렸다고 하면 사람이 이 도구를 무시하게 된다.
+-->
+<style>
+:root{
+  --bg:#ffffff;--panel:#f7f7f5;--ink:#111111;--muted:#6b6b68;--line:#dededb;
+  --ok:#0f7b6c;--okbg:#e6f4ea;--bad:#b02f1c;--badbg:#fdecea;--warn:#8a6100;--warnbg:#fdf4e3;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--panel);color:var(--ink);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Segoe UI","Apple SD Gothic Neo",sans-serif;
+  word-break:keep-all}
+.wrap{max-width:1180px;margin:0 auto;padding:36px 24px 120px}
+h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}
+.sub{margin:0 0 26px;color:var(--muted);font-size:14px}
+fieldset{margin:0 0 22px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+legend{padding:0 8px;font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+label{display:block;margin:0 0 4px;font-size:12.5px;color:var(--muted)}
+input[type=text]{width:100%;margin-bottom:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+  font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);color:var(--ink)}
+input[type=text]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button{min-height:44px;padding:0 22px;border:0;border-radius:999px;background:var(--ink);color:#fff;
+  font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+.score{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+.tile{flex:1 1 160px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.tile b{display:block;font-size:23px;letter-spacing:-.02em}
+.tile span{font-size:12px;color:var(--muted)}
+.tile.pass b{color:var(--ok)} .tile.fail b{color:var(--bad)} .tile.warn b{color:var(--warn)}
+
+.grp{margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
+.grp > summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
+  font-size:14.5px;font-weight:600;letter-spacing:-.01em;list-style:none}
+.grp > summary::-webkit-details-marker{display:none}
+.grp > summary::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+.grp[open] > summary::before{transform:rotate(90deg)}
+.badge{margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600}
+.badge.ok{background:var(--okbg);color:var(--ok)}
+.badge.bad{background:var(--badbg);color:var(--bad)}
+.badge.warn{background:var(--warnbg);color:var(--warn)}
+.hint{margin:0;padding:0 18px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;text-align:left;border-top:1px solid var(--line);vertical-align:top}
+th{background:var(--panel);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.mono,th.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+tr.bad td{background:var(--badbg)}
+.swatch{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.15);
+  vertical-align:-1px;margin-right:5px}
+.empty{padding:0 18px 16px;color:var(--ok);font-size:13px}
+.frame{position:fixed;left:-10000px;top:0;border:0}
+.note{margin:26px 0 0;padding:16px 18px;border-left:3px solid var(--line);background:var(--bg);
+  border-radius:0 10px 10px 0;font-size:13px;color:var(--muted);line-height:1.7}
+.note b{color:var(--ink)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>시안 ↔ 구현 대조</h1>
+  <p class="sub">같은 <code>data-parity</code> 표식끼리 색·타이포·형태·너비를 비교합니다. 클래스 이름이 달라도 됩니다.</p>
+
+  <fieldset>
+    <legend>대상</legend>
+    <label for="a">시안 (기준)</label>
+    <input type="text" id="a" value="../_design/mockups/home.html">
+    <label for="b">구현 (개발 서버)</label>
+    <input type="text" id="b" value="http://localhost:5173/">
+    <label for="widths">확인 폭 (px)</label>
+    <input type="text" id="widths" value="390, 768, 1280, 1536">
+    <label for="tol">허용 오차 — <code>크기px, 글자px</code>. 색은 항상 정확히 비교합니다</label>
+    <input type="text" id="tol" value="2, 0.5">
+    <button id="run">대조 실행</button>
+  </fieldset>
+
+  <div id="out"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── 비교 대상 속성 ─────────────────────────────────────────────
+   위치(top/left)는 넣지 않는다. 레이아웃이 조금 다른 것은 정상일 수 있고,
+   그것까지 실패로 만들면 진짜 어긋남이 묻힌다. */
+/* 너비는 레이아웃이 만든다 — 어긋나면 문제다.
+   높이는 대부분 **내용이** 만든다. 카피 한 줄만 달라도 수백 px 차이가 나고,
+   그게 색·타이포 같은 진짜 어긋남을 묻어버린다. 그래서 따로 뺀다. */
+var BOX   = ["width"];
+var SIZE_SOFT = ["height"];
+var TYPE  = ["fontSize", "fontWeight", "lineHeight", "letterSpacing", "textAlign", "textTransform"];
+var COLOR = ["color", "backgroundColor", "borderTopColor"];
+var SHAPE = ["borderTopLeftRadius", "borderBottomLeftRadius", "borderTopWidth",
+             "paddingTop", "paddingLeft", "marginTop", "opacity", "display", "flexDirection"];
+
+var LABEL = {
+  width:"너비", height:"높이",
+  fontSize:"글자 크기", fontWeight:"굵기", lineHeight:"행간", letterSpacing:"자간",
+  textAlign:"정렬", textTransform:"대소문자",
+  color:"글자색", backgroundColor:"배경색", borderTopColor:"테두리색",
+  borderTopLeftRadius:"모서리(상좌)", borderBottomLeftRadius:"모서리(하좌)", borderTopWidth:"테두리 두께",
+  paddingTop:"안쪽 여백(위)", paddingLeft:"안쪽 여백(좌)", marginTop:"바깥 여백(위)",
+  opacity:"불투명도", display:"display", flexDirection:"flex 방향"
+};
+
+function parseColor(s){
+  if(!s) return null;
+  var m = s.match(/rgba?\(([^)]+)\)/);
+  if(!m) return null;
+  var p = m[1].split(/[,\s\/]+/).filter(Boolean).map(Number);
+  if(p.length < 3 || p.some(isNaN)) return null;
+  return {r:p[0], g:p[1], b:p[2], a:p.length > 3 ? p[3] : 1};
+}
+function over(fg, bg){
+  var a = fg.a;
+  return {r:fg.r*a + bg.r*(1-a), g:fg.g*a + bg.g*(1-a), b:fg.b*a + bg.b*(1-a), a:1};
+}
+function hex(c){
+  return "#" + [c.r,c.g,c.b].map(function(v){
+    return Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,"0");
+  }).join("");
+}
+/* 색은 합성해서 비교한다. rgba(0,0,0,0) 끼리 같다고 넘기면
+   "배경이 없다"와 "배경이 흰색이다"를 구분하지 못한다. */
+function flatColor(el, win, prop){
+  var raw = win.getComputedStyle(el)[prop];
+  var c = parseColor(raw);
+  if(!c) return raw;
+  if(c.a === 0) return "투명";
+  var node = el.parentElement, base = {r:255,g:255,b:255,a:1}, layers = [];
+  while(node && node.nodeType === 1){
+    var b = parseColor(win.getComputedStyle(node).backgroundColor);
+    if(b && b.a > 0){ layers.push(b); if(b.a >= 0.999) break; }
+    node = node.parentElement;
+  }
+  for(var i = layers.length - 1; i >= 0; i--) base = over(layers[i], base);
+  return hex(over(c, base));
+}
+
+function num(v){
+  var n = parseFloat(v);
+  return isNaN(n) ? null : n;
+}
+
+function readOne(el, win){
+  var cs = win.getComputedStyle(el), r = el.getBoundingClientRect(), out = {};
+  BOX.concat(SIZE_SOFT).forEach(function(k){ out[k] = k === "width" ? r.width : r.height; });
+  TYPE.concat(SHAPE).forEach(function(k){ out[k] = cs[k]; });
+  COLOR.forEach(function(k){ out[k] = flatColor(el, win, k); });
+  out.__text = (el.textContent || "").trim().slice(0, 40);
+  return out;
+}
+
+function collect(D, win){
+  var map = {};
+  Array.prototype.forEach.call(D.querySelectorAll("[data-parity]"), function(el){
+    var name = el.getAttribute("data-parity");
+    var cs = win.getComputedStyle(el);
+    if(cs.display === "none" || cs.visibility === "hidden") return;
+    if(!el.getClientRects().length) return;
+    if(map[name]) { map[name].__dup = (map[name].__dup || 1) + 1; return; }
+    map[name] = readOne(el, win);
+  });
+  return map;
+}
+
+function loadAt(src, w){
+  return new Promise(function(res, rej){
+    var f = document.createElement("iframe");
+    f.className = "frame"; f.width = w; f.height = 900;
+    var sep = src.indexOf("?") < 0 ? "?" : "&";
+    f.src = src + sep + "parity=" + Date.now() + Math.random();
+    document.body.appendChild(f);
+    var done = false;
+    f.onload = function(){
+      setTimeout(function(){
+        // 전환이 진행되지 않는 환경에서도 목표 값을 읽게 전환을 끈다
+        try{
+          var D = f.contentDocument;
+          var kill = D.createElement("style");
+          kill.textContent = "*,*::before,*::after{transition:none!important;animation:none!important}";
+          D.head.appendChild(kill);
+          // 진입 모션의 시작 상태를 걷어낸다. kill 스타일을 붙인 **뒤에** 지워야 한다 —
+          // 먼저 지우면 전환이 시작되고, 전환이 진행되지 않는 환경에서
+          // 계산값이 0 에 멈춘 채로 읽혀 검사를 통째로 건너뛴다.
+          D.documentElement.classList.remove("js-reveal");
+        }catch(e){}
+        setTimeout(function(){ done = true; res(f); }, 150);
+      }, 550);
+    };
+    setTimeout(function(){
+      if(!done){ try{ f.remove(); }catch(e){} rej(new Error("불러오지 못했습니다: " + src)); }
+    }, 12000);
+  });
+}
+
+document.getElementById("run").addEventListener("click", async function(){
+  var btn = this;
+  btn.disabled = true; btn.textContent = "대조 중…";
+  var A = document.getElementById("a").value.trim();
+  var B = document.getElementById("b").value.trim();
+  var widths = document.getElementById("widths").value.split(",")
+      .map(function(s){ return parseInt(s.trim(),10); }).filter(function(n){ return n > 0; });
+  var tolRaw = document.getElementById("tol").value.split(",").map(function(s){ return parseFloat(s.trim()); });
+  var tol = { size: isNaN(tolRaw[0]) ? 2 : tolRaw[0], text: isNaN(tolRaw[1]) ? 0.5 : tolRaw[1] };
+
+  var result = {}, fatal = null;
+  for(var i = 0; i < widths.length; i++){
+    var w = widths[i];
+    try{
+      var fa = await loadAt(A, w);
+      var fb = await loadAt(B, w);
+      result[w] = {
+        a: collect(fa.contentDocument, fa.contentWindow),
+        b: collect(fb.contentDocument, fb.contentWindow)
+      };
+      fa.remove(); fb.remove();
+    }catch(e){
+      fatal = e.message;
+      break;
+    }
+  }
+  render(result, widths, tol, fatal);
+  btn.disabled = false; btn.textContent = "대조 실행";
+});
+
+function diffValue(key, va, vb, tol){
+  if(va === undefined || vb === undefined) return null;
+  var na = num(va), nb = num(vb);
+  if(na !== null && nb !== null && /px|^\d/.test(String(va))){
+    var limit = (key === "fontSize" || key === "letterSpacing" || key === "lineHeight") ? tol.text : tol.size;
+    if(key === "opacity") limit = 0.02;
+    if(Math.abs(na - nb) <= limit) return null;
+    return { a: (Math.round(na*100)/100) + "", b: (Math.round(nb*100)/100) + "", delta: (nb - na > 0 ? "+" : "") + (Math.round((nb-na)*100)/100) };
+  }
+  if(String(va) === String(vb)) return null;
+  return { a: String(va), b: String(vb), delta: "" };
+}
+
+function render(result, widths, tol, fatal){
+  var out = document.getElementById("out");
+  if(fatal){
+    out.innerHTML = '<div class="grp" open><summary>불러오기 실패<span class="badge bad">중단</span></summary>' +
+      '<p class="hint">' + esc(fatal) + '<br>구현 쪽은 개발 서버가 떠 있어야 하고, 두 주소가 <b>같은 출처</b>여야 계산 스타일을 읽을 수 있습니다. ' +
+      'dev 서버를 이 파일과 같은 호스트로 프록시하거나, 빌드 결과를 같은 서버에서 서빙하세요.</p></div>';
+    return;
+  }
+
+  var names = {}, missA = {}, missB = {};
+  widths.forEach(function(w){
+    var r = result[w]; if(!r) return;
+    Object.keys(r.a).forEach(function(n){ names[n] = 1; if(!r.b[n]) missB[n] = 1; });
+    Object.keys(r.b).forEach(function(n){ names[n] = 1; if(!r.a[n]) missA[n] = 1; });
+  });
+  var all = Object.keys(names).sort();
+
+  var groups = [
+    { key:"color", title:"색",        keys:COLOR },
+    { key:"type",  title:"타이포",    keys:TYPE },
+    { key:"shape", title:"형태·여백",  keys:SHAPE },
+    { key:"box",   title:"너비",      keys:BOX },
+    { key:"soft",  title:"높이 (참고)", keys:SIZE_SOFT, soft:true,
+      hint:"높이는 대부분 내용이 만듭니다. 카피 한 줄이 달라도 수백 px 차이가 나므로 <b>어긋남으로 세지 않습니다.</b> 고정 높이를 쓴 블록(헤더 등)에서 차이가 나면 그건 봐야 합니다." }
+  ];
+
+  var rows = {}, total = 0, soft = 0;
+  groups.forEach(function(g){ rows[g.key] = ""; });
+
+  all.forEach(function(name){
+    widths.forEach(function(w){
+      var r = result[w]; if(!r) return;
+      var va = r.a[name], vb = r.b[name];
+      if(!va || !vb) return;
+      groups.forEach(function(g){
+        g.keys.forEach(function(k){
+          var d = diffValue(k, va[k], vb[k], tol);
+          if(!d) return;
+          if(!g.soft) total++;
+          else soft++;
+          var sw = /color|Color/.test(k) && /^#/.test(d.a) && /^#/.test(d.b)
+            ? '<span class="swatch" style="background:' + d.a + '"></span>' + d.a +
+              ' → <span class="swatch" style="background:' + d.b + '"></span>' + d.b
+            : esc(d.a) + " → " + esc(d.b);
+          rows[g.key] += '<tr class="bad"><td class="mono">' + w + "</td>" +
+            '<td class="mono">' + esc(name) + "</td>" +
+            "<td>" + (LABEL[k] || k) + "</td>" +
+            "<td>" + sw + "</td>" +
+            '<td class="mono">' + esc(d.delta) + "</td></tr>";
+        });
+      });
+    });
+  });
+
+  var missing = Object.keys(missB).length + Object.keys(missA).length;
+  // 짝이 하나도 맞지 않았는데 "일치" 라고 하면 안 된다.
+  // 비교를 못 한 것과 비교해서 같은 것은 전혀 다르다 — 오판이 가장 위험하다.
+  var matched = all.filter(function(n){ return !missA[n] && !missB[n]; }).length;
+  if (!matched) total = Math.max(total, 1);
+
+  var html = '<div class="score">' +
+    '<div class="tile ' + (total ? "fail" : "pass") + '"><b>' +
+      (!matched ? "비교 못 함" : total ? total + "건" : "일치") + "</b><span>어긋난 값</span></div>" +
+    '<div class="tile ' + (soft ? "warn" : "pass") + '"><b>' + (soft ? soft + "건" : "없음") + "</b><span>높이 차이 (참고)</span></div>" +
+    '<div class="tile ' + (missing ? "warn" : "pass") + '"><b>' + (missing ? missing + "개" : "없음") + "</b><span>짝 없는 표식</span></div>" +
+    '<div class="tile ' + (matched ? "" : "fail") + '"><b>' + matched + " / " + all.length + "</b><span>짝이 맞은 표식</span></div>" +
+    "</div>";
+
+  if(!all.length){
+    html += '<div class="grp" open><summary>표식이 없습니다<span class="badge warn">확인</span></summary>' +
+      '<p class="hint">시안과 구현 양쪽에 <code>data-parity="이름"</code> 을 달아야 비교합니다. ' +
+      '먼저 시안의 주요 블록(header · hero · 각 섹션 · footer)에 표식을 달고, 구현에도 같은 이름을 다세요.</p></div>';
+  }
+
+  groups.forEach(function(g){
+    var n = (rows[g.key].match(/<tr/g) || []).length;
+    html += '<details class="grp"' + (n && !g.soft ? " open" : "") + "><summary>" + g.title +
+      (n ? '<span class="badge ' + (g.soft ? "warn" : "bad") + '">' + n + "건</span>" : '<span class="badge ok">일치</span>') + "</summary>" +
+      (g.hint ? '<p class="hint">' + g.hint + "</p>" : "") +
+      (n ? '<table><thead><tr><th class="mono">폭</th><th class="mono">표식</th><th>속성</th><th>시안 → 구현</th><th class="mono">차이</th></tr></thead><tbody>' +
+           rows[g.key] + "</tbody></table>"
+         : '<p class="empty">어긋남 없음</p>') + "</details>";
+  });
+
+  if(missing){
+    var ml = "";
+    Object.keys(missB).forEach(function(n){ ml += '<tr class="bad"><td class="mono">' + esc(n) + "</td><td>시안에만 있음 — 구현에 표식이 없거나 그 블록을 아직 안 만들었습니다</td></tr>"; });
+    Object.keys(missA).forEach(function(n){ ml += '<tr class="bad"><td class="mono">' + esc(n) + "</td><td>구현에만 있음 — 시안에 없는 블록입니다. 의도한 확장이면 build-rules 에 적으세요</td></tr>"; });
+    html += '<details class="grp" open><summary>짝 없는 표식<span class="badge warn">' + missing + "개</span></summary>" +
+      '<p class="hint">한쪽에만 있는 표식입니다. 시안에 없는 화면을 4단계가 채우는 것은 정상이지만, <b>어느 쪽인지 적어 두어야</b> 빠뜨린 것과 구분됩니다.</p>' +
+      '<table><thead><tr><th class="mono">표식</th><th>상태</th></tr></thead><tbody>' + ml + "</tbody></table></details>";
+  }
+
+  html += '<p class="note"><b>이 도구가 보지 않는 것.</b> 위치(top/left)는 비교하지 않습니다 — ' +
+    '레이아웃이 조금 다른 것은 정상일 수 있고, 그것까지 실패로 만들면 진짜 어긋남이 묻힙니다. ' +
+    '대신 색·타이포·형태·너비를 봅니다. 높이는 내용이 만드는 값이라 참고로만 냅니다. <b>표식을 달지 않은 블록은 비교되지 않습니다</b> — ' +
+    '"일치"는 <i>표식을 단 것 중에</i> 어긋남이 없다는 뜻입니다.</p>';
+
+  out.innerHTML = html;
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
+  });
+}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+{
+  "name": "ai",
+  "label": "AI — 모델 · 프롬프트 · 평가 · 안전",
+  "docs": [
+    {
+      "name": "use-case",
+      "template": "spec",
+      "phase": "10. 착수 · 분석",
+      "title": "유즈케이스 정의",
+      "summary": "AI가 대체·보조하는 작업과 그 작업의 현재 비용.",
+      "minScale": "small"
+    },
+    {
+      "name": "feasibility",
+      "template": "spec",
+      "phase": "10. 착수 · 분석",
+      "title": "타당성 검토",
+      "summary": "이 문제가 모델로 풀리는가. 규칙 기반이 더 나은 부분은 어디인가.",
+      "minScale": "standard"
+    },
+    {
+      "name": "interaction-design",
+      "template": "spec",
+      "phase": "20. 설계",
+      "title": "AI 인터랙션 설계",
+      "summary": "사용자가 결과를 확인·수정·거부하는 경로. 신뢰 형성 장치.",
+      "minScale": "standard"
+    },
+    {
+      "name": "data-spec",
+      "template": "spec",
+      "phase": "20. 설계",
+      "title": "데이터 정의서",
+      "summary": "입력 데이터 출처, 전처리, 보관, 학습 사용 여부."
+    },
+    {
+      "name": "model-architecture",
+      "template": "spec",
+      "phase": "20. 설계",
+      "title": "모델 · 파이프라인 아키텍처",
+      "summary": "모델 선택, 검색(RAG) 구조, 도구 호출, 폴백 경로.",
+      "minScale": "large"
+    },
+    {
+      "name": "prompt-spec",
+      "template": "spec",
+      "phase": "20. 설계",
+      "title": "프롬프트 정의서",
+      "summary": "시스템 프롬프트, 컨텍스트 구성 규칙, 버전 관리.",
+      "minScale": "standard"
+    },
+    {
+      "name": "evaluation-plan",
+      "template": "spec",
+      "phase": "40. 검증",
+      "title": "평가 계획",
+      "summary": "평가셋, 지표, 합격선. 사람이 판정할 항목과 자동 판정 항목.",
+      "minScale": "standard"
+    },
+    {
+      "name": "safety-failure-modes",
+      "template": "spec",
+      "phase": "40. 검증",
+      "title": "안전 · 실패 모드",
+      "summary": "환각, 유출, 오남용, 프롬프트 주입에 대한 방어와 한계 고지.",
+      "minRisk": "standard"
+    },
+    {
+      "name": "cost-latency-budget",
+      "template": "spec",
+      "phase": "30. 구축",
+      "title": "비용 · 지연 예산",
+      "summary": "요청당 토큰·비용·지연 목표와 초과 시 대응.",
+      "minScale": "large"
+    }
+  ]
+}

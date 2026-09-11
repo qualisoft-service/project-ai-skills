@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시안 검수 — audit</title>
+<!--
+  시안 자동 검수. Docs/_design/audit.html
+
+  MEDIUMS.md 의 검수 표를 **실행 가능한 규칙**으로 옮긴 것이다.
+  문장으로 적힌 기준은 지켜지지 않는다. 여기서 빨간 줄이 뜨면 눈에 보인다.
+
+  브라우저에서 그냥 열면 된다. 의존성 없음.
+  시안을 iframe 으로 각 폭에 띄우고 실제 계산된 스타일을 읽는다.
+
+  ── 왜 명도비를 여기서 또 보는가 ──
+  styleguide.html 은 **토큰 쌍**의 대비만 잰다. 그런데 실제로 터지는 결함은
+  토큰이 아니라 합성 결과에서 난다:
+    · 검정 배경 위 검정 글자 (CSS 우선순위 사고)
+    · opacity 0.55 를 먹은 회색 글자
+    · 고정 글라스 헤더가 어두운 섹션 위로 지나갈 때
+  그래서 여기서는 **보이는 텍스트마다 실제 합성 전경색 × 실제 합성 배경색**을 잰다.
+-->
+<style>
+:root{
+  --bg:#ffffff;--panel:#f7f7f5;--ink:#111111;--muted:#6b6b68;--line:#dededb;
+  --ok:#0f7b6c;--okbg:#e6f4ea;--bad:#b02f1c;--badbg:#fdecea;--warn:#8a6100;--warnbg:#fdf4e3;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--panel);color:var(--ink);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Segoe UI","Apple SD Gothic Neo",sans-serif;
+  word-break:keep-all}
+.wrap{max-width:1100px;margin:0 auto;padding:36px 24px 120px}
+h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}
+.sub{margin:0 0 28px;color:var(--muted);font-size:14px}
+fieldset{margin:0 0 22px;padding:18px 20px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+legend{padding:0 8px;font-size:12.5px;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+label{display:block;margin:0 0 4px;font-size:12.5px;color:var(--muted)}
+input[type=text]{width:100%;margin-bottom:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;
+  font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--bg);color:var(--ink)}
+input[type=text]:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button{min-height:44px;padding:0 22px;border:0;border-radius:999px;background:var(--ink);color:#fff;
+  font-size:14px;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+
+.score{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+.tile{flex:1 1 150px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.tile b{display:block;font-size:23px;letter-spacing:-.02em}
+.tile span{font-size:12px;color:var(--muted)}
+.tile.pass b{color:var(--ok)} .tile.fail b{color:var(--bad)} .tile.warn b{color:var(--warn)}
+
+.check{margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);overflow:hidden}
+.check > summary{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;
+  font-size:14.5px;font-weight:600;letter-spacing:-.01em;list-style:none}
+.check > summary::-webkit-details-marker{display:none}
+.check > summary::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+.check[open] > summary::before{transform:rotate(90deg)}
+.badge{margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:600}
+.badge.ok{background:var(--okbg);color:var(--ok)}
+.badge.bad{background:var(--badbg);color:var(--bad)}
+.badge.warn{background:var(--warnbg);color:var(--warn)}
+.hint{margin:0;padding:0 18px 12px;font-size:12.5px;color:var(--muted);line-height:1.55}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:8px 10px;text-align:left;border-top:1px solid var(--line);vertical-align:top}
+th{background:var(--panel);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.mono,th.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+tr.bad td{background:var(--badbg)}
+tr.warn td{background:var(--warnbg)}
+.swatch{display:inline-block;width:11px;height:11px;border-radius:3px;border:1px solid rgba(0,0,0,.15);
+  vertical-align:-1px;margin-right:5px}
+.empty{padding:0 18px 16px;color:var(--ok);font-size:13px}
+.frame{position:fixed;left:-10000px;top:0;border:0}
+.note{margin:26px 0 0;padding:16px 18px;border-left:3px solid var(--line);background:var(--bg);
+  border-radius:0 10px 10px 0;font-size:13px;color:var(--muted);line-height:1.7}
+.note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>시안 검수</h1>
+  <p class="sub">MEDIUMS.md 의 검수 기준을 실제 렌더 결과로 판정합니다. 시안을 고칠 때마다 다시 돌리세요.</p>
+
+  <fieldset>
+    <legend>대상</legend>
+    <label for="target">시안 경로 (이 파일 기준 상대 경로)</label>
+    <input type="text" id="target" value="mockups/home.html">
+    <label for="widths">확인 폭 (px, 쉼표로 구분)</label>
+    <input type="text" id="widths" value="390, 768, 1280, 1536">
+    <label for="exempt">글자 크기 하한 예외 선택자 — 제품 UI 일러스트처럼 '읽는 카피'가 아닌 것</label>
+    <input type="text" id="exempt" value="[data-illustration]">
+    <label for="state">상태 (선택) — <code>선택자:클래스</code> 로 클래스를 붙이고, <code>open:#시트id</code> 로 <code>&lt;dialog&gt;</code>를 엽니다.
+      <code>;</code> 로 여러 개. <b>닫힌 시트 안은 측정되지 않으므로</b> 시트가 있으면 반드시 열어서 한 번 더 돌리세요</label>
+    <input type="text" id="state" value="" placeholder="예: .site-header:is-stuck; open:#askSheet">
+    <button id="run">검수 실행</button>
+  </fieldset>
+
+  <div id="out"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ── 색 유틸 ────────────────────────────────────────────────────── */
+function parseColor(s){
+  if(!s) return null;
+  var m = s.match(/rgba?\(([^)]+)\)/);
+  if(!m) return null;
+  var p = m[1].split(/[,\s\/]+/).filter(Boolean).map(Number);
+  if(p.length < 3 || p.some(isNaN)) return null;
+  return {r:p[0], g:p[1], b:p[2], a:p.length > 3 ? p[3] : 1};
+}
+function over(fg, bg){ // fg 를 bg 위에 합성
+  var a = fg.a;
+  return {r:fg.r*a + bg.r*(1-a), g:fg.g*a + bg.g*(1-a), b:fg.b*a + bg.b*(1-a), a:1};
+}
+function hex(c){
+  return "#" + [c.r,c.g,c.b].map(function(v){
+    return Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,"0");
+  }).join("");
+}
+function lum(c){
+  var a = [c.r,c.g,c.b].map(function(v){
+    v /= 255;
+    return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+  });
+  return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
+}
+function ratio(a, b){
+  var l1 = lum(a), l2 = lum(b);
+  return (Math.max(l1,l2) + 0.05) / (Math.min(l1,l2) + 0.05);
+}
+
+/* ── 합성 배경 ──────────────────────────────────────────────────
+   조상을 타고 올라가며 배경색을 겹친다. 불투명한 면을 만나면 멈춘다.
+   ponytail: 조상 opacity 는 전경 알파에만 반영한다. 조상에 opacity 를 걸고
+   그 안에 글자를 두는 경우는 드물고, 그때는 전경·배경이 함께 흐려져
+   대비가 대체로 보존된다. 정밀도가 필요해지면 레이어별 합성으로 올린다.
+------------------------------------------------------------------ */
+function pseudoLayer(node, win, which){
+  var ps;
+  try{ ps = win.getComputedStyle(node, which); }catch(e){ return null; }
+  if(!ps || ps.content === "none" || ps.content === "normal") return null;
+  var c = parseColor(ps.backgroundColor);
+  if(!c || c.a === 0) return null;
+  var o = parseFloat(ps.opacity);
+  if(isNaN(o)) o = 1;
+  if(o === 0) return null;              // 전환 전 상태 — 면이 아직 없다
+  return {r:c.r, g:c.g, b:c.b, a: c.a * o};
+}
+function bgChain(el, win){
+  var layers = [], node = el, floating = false;
+  while(node && node.nodeType === 1){
+    var cs = win.getComputedStyle(node);
+    var isFloat = cs.position === "fixed" || cs.position === "sticky" ||
+                  (cs.backdropFilter && cs.backdropFilter !== "none");
+    if(isFloat) floating = true;
+
+    // 의사요소가 만든 면(글라스 레이어 등)은 요소 자신의 배경보다 위에 온다
+    var pl = pseudoLayer(node, win, "::before") || pseudoLayer(node, win, "::after");
+    if(pl){
+      layers.push(pl);
+      if(pl.a >= 0.999) return {layers:layers, opaque:true, floating:floating};
+    }
+    var c = parseColor(cs.backgroundColor);
+    if(c && c.a > 0){
+      layers.push(c);
+      if(c.a >= 0.999) return {layers:layers, opaque:true, floating:floating};
+    }
+
+    // 떠 있는 요소를 지나면 그 아래는 조상이 아니다. 스크롤된 임의의 면이다.
+    // 여기서 끊지 않으면 body 의 흰색을 물려받아 "항상 흰 배경"이라는
+    // 틀린 결론이 나온다 — 고정 헤더가 딱 그렇다.
+    if(isFloat) return {layers:layers, opaque:false, floating:true};
+
+    node = node.parentElement;
+  }
+  return {layers:layers, opaque:false, floating:floating};
+}
+function composite(layers, base){
+  var out = base;
+  for(var i = layers.length - 1; i >= 0; i--) out = over(layers[i], out);
+  return out;
+}
+function opacityChain(el, win){
+  var o = 1, node = el;
+  while(node && node.nodeType === 1){
+    var v = parseFloat(win.getComputedStyle(node).opacity);
+    if(!isNaN(v)) o *= v;
+    node = node.parentElement;
+  }
+  return o;
+}
+
+/* ── 검사 ───────────────────────────────────────────────────────── */
+var WHITE = {r:255,g:255,b:255,a:1}, BLACK = {r:0,g:0,b:0,a:1};
+
+function visible(el, win){
+  var cs = win.getComputedStyle(el);
+  if(cs.display === "none" || cs.visibility === "hidden") return false;
+  if(parseFloat(cs.opacity) === 0) return false;
+  return el.getClientRects().length > 0;
+}
+
+function textLeaves(D, win){
+  return Array.prototype.filter.call(D.querySelectorAll("body *"), function(el){
+    if(el.children.length) return false;
+    if(!el.textContent.trim()) return false;
+    if(el.closest("script,style,svg")) return false;
+    // aria-hidden / presentation 은 읽히지 않는 장식이다. 구분점(·) 같은 것.
+    if(el.closest('[aria-hidden="true"],[role="presentation"]')) return false;
+    return visible(el, win);
+  });
+}
+
+function auditOne(D, win, W, exempt){
+  var d = D.documentElement, res = {};
+
+  /* 1. 가로 스크롤 */
+  res.hScroll = d.scrollWidth > d.clientWidth
+    ? [{ what:"문서", detail: d.scrollWidth + "px > " + d.clientWidth + "px" }] : [];
+
+  /* 2. 뷰포트 이탈 */
+  res.overflow = [];
+  Array.prototype.forEach.call(D.querySelectorAll("body *"), function(el){
+    if(!visible(el, win)) return;
+    var r = el.getBoundingClientRect();
+    if(r.width === 0 || r.height === 0) return;
+    if(Math.round(r.right) > W + 1 || Math.round(r.left) < -1){
+      res.overflow.push({ what: sel(el), detail: "left " + Math.round(r.left) + " / right " + Math.round(r.right) });
+    }
+  });
+
+  /* 3. 터치 타깃 — AA 하한 24px 은 실패, 주요 조작 44px 은 권고
+        그리고 **크기가 0 인 조작 요소**는 따로 잡는다.
+        visible() 이 걸러내 버리면 "없는 것"이 되어 조용히 통과한다 —
+        실제로 스타일이 빠져 0×0 이 된 닫기 버튼을 그렇게 놓친 적이 있다. */
+  res.zeroSize = [];
+  // 자기 자신뿐 아니라 **조상까지** 봐야 한다. 반응형으로 감춘 메뉴는
+  // 부모가 display:none 이고 자식은 아니어서, 자기만 보면 전부 오탐이 된다.
+  var hiddenByCss = function(el){
+    var n = el;
+    while(n && n.nodeType === 1){
+      var c = win.getComputedStyle(n);
+      if(c.display === "none" || c.visibility === "hidden") return true;
+      n = n.parentElement;
+    }
+    return false;
+  };
+  Array.prototype.forEach.call(D.querySelectorAll("a[href],button,input,select,textarea,[role=button]"), function(el){
+    if(hiddenByCss(el)) return;                                        // 의도적으로 감춘 것
+    if(el.closest("dialog:not([open])")) return;                       // 닫힌 시트 안
+    var r = el.getBoundingClientRect();
+    if(r.width < 1 || r.height < 1){
+      res.zeroSize.push({
+        what: (el.textContent.trim().slice(0,16) || el.getAttribute("aria-label") || sel(el)),
+        detail: Math.round(r.width) + "×" + Math.round(r.height) + " — 스타일이 적용되지 않았을 수 있습니다",
+      });
+    }
+  });
+
+  res.tapFail = []; res.tapWarn = [];
+  Array.prototype.forEach.call(D.querySelectorAll("a,button,input,select,textarea,[role=button]"), function(el){
+    if(!visible(el, win)) return;
+    var r = el.getBoundingClientRect();
+    var w = Math.round(r.width), h = Math.round(r.height);
+    var label = (el.textContent.trim() || el.getAttribute("aria-label") || sel(el)).slice(0,28);
+    // WCAG 2.5.8 예외: 문장 안에 흐르는 인라인 링크는 크기 요구에서 빠진다
+    var own = el.textContent.trim();
+    var inlineInProse = win.getComputedStyle(el).display === "inline" &&
+        el.parentElement && el.parentElement.textContent.trim().length > own.length + 1;
+    if(inlineInProse) return;
+    if(h < 24 || w < 24) res.tapFail.push({ what:label, detail: w + "×" + h });
+    else if(W <= 860 && (h < 44 || w < 44)) res.tapWarn.push({ what:label, detail: w + "×" + h });
+  });
+
+  /* 4. 글자 크기 하한 */
+  res.tiny = [];
+  textLeaves(D, win).forEach(function(el){
+    if(exempt && el.closest(exempt)) return;
+    var px = parseFloat(win.getComputedStyle(el).fontSize);
+    if(px < 12) res.tiny.push({ what: el.textContent.trim().slice(0,28), detail: px.toFixed(1) + "px" });
+  });
+
+  /* 5. 합성 명도비 — 이 도구의 핵심 */
+  res.contrast = []; res.contrastFloat = [];
+  // WCAG 1.4.3 은 비활성 컨트롤의 글자를 대비 요구에서 면제한다.
+  // 면제 대상까지 빨갛게 띄우면 사람이 이 도구를 무시하게 된다 — 그게 더 나쁘다.
+  var inactive = function(el){
+    return !!el.closest("[disabled],[aria-disabled='true'],:disabled");
+  };
+  textLeaves(D, win).forEach(function(el){
+    var cs = win.getComputedStyle(el);
+    var fg0 = parseColor(cs.color);
+    if(!fg0) return;
+    if(inactive(el)) return;
+    var px = parseFloat(cs.fontSize), wt = parseInt(cs.fontWeight,10) || 400;
+    var large = px >= 24 || (px >= 18.66 && wt >= 700);
+    var need = large ? 3 : 4.5;
+
+    var chain = bgChain(el, win);
+    var op = opacityChain(el, win);
+    var fgA = { r:fg0.r, g:fg0.g, b:fg0.b, a: fg0.a * op };
+
+    // 불투명한 바닥에 닿지 못했거나 떠 있는 요소(fixed/sticky/backdrop-filter)라면
+    // 흰 바닥과 검은 바닥 양쪽을 재서 **나쁜 쪽**으로 판정한다.
+    var settled = chain.opaque && !chain.floating;
+    var measure = function(base){
+      var bg = composite(chain.layers, base);
+      var fg = over(fgA, bg);
+      return { r: ratio(fg, bg), fg:fg, bg:bg };
+    };
+    if(settled){
+      var m = measure(WHITE);
+      if(m.r < need){
+        res.contrast.push({
+          what: el.textContent.trim().slice(0,30), sel: sel(el),
+          detail: m.r.toFixed(2) + ":1 (필요 " + need + ")",
+          fg: hex(m.fg), bg: hex(m.bg), note: ""
+        });
+      }
+    }else{
+      var a = measure(WHITE), b = measure(BLACK);
+      var lo = Math.min(a.r, b.r), hi = Math.max(a.r, b.r);
+      var bad = (lo < a.r ? b : a);
+      if(lo < need){
+        res.contrastFloat.push({
+          what: el.textContent.trim().slice(0,30), sel: sel(el),
+          detail: lo.toFixed(2) + " ~ " + hi.toFixed(2) + ":1 (필요 " + need + ")",
+          fg: hex(bad.fg), bg: hex(bad.bg),
+          note: "배경에 따라 달라짐 — 이 요소가 지나가는 모든 면에서 확인"
+        });
+      }
+    }
+  });
+
+  /* 6. 포커스 링 — 안티패턴 '포커스 제거' */
+  res.focus = [];
+  var focusables = Array.prototype.filter.call(
+    D.querySelectorAll("a[href],button,input,select,textarea"), function(el){ return visible(el, win); });
+  if(focusables.length){
+    var anyRule = false;
+    // @layer · @media · @supports 안에 들어 있어도 찾아야 한다.
+    // Tailwind 4 는 거의 모든 규칙을 레이어로 감싸므로 최상위만 보면 못 찾는다.
+    var scanFocus = function(rules){
+      Array.prototype.forEach.call(rules || [], function(r){
+        if(r.selectorText && /:focus-visible|:focus\b/.test(r.selectorText)
+           && r.style && /outline|box-shadow/.test(r.style.cssText)) anyRule = true;
+        if(r.cssRules) scanFocus(r.cssRules);
+      });
+    };
+    try{
+      Array.prototype.forEach.call(D.styleSheets, function(ss){
+        var rules; try{ rules = ss.cssRules; }catch(e){ return; }
+        scanFocus(rules);
+      });
+    }catch(e){}
+    if(!anyRule) res.focus.push({ what:"문서 전체", detail:":focus-visible 스타일 선언이 없습니다 — 기본 링에 의존" });
+  }
+
+  /* 7. 죽은 CSS */
+  res.dead = [];
+  var used = new Set();
+  Array.prototype.forEach.call(D.querySelectorAll("[class]"), function(el){
+    el.classList.forEach(function(c){ used.add(c); });
+  });
+  var declared = new Set();
+  try{
+    Array.prototype.forEach.call(D.styleSheets, function(ss){
+      // 링크된 공용 시트(tokens.css)는 제외 — 이 시안이 안 쓴다고 죽은 것이 아니다
+      if(ss.href) return;
+      var rules; try{ rules = ss.cssRules; }catch(e){ return; }
+      Array.prototype.forEach.call(rules || [], function(r){
+        collectClasses(r, declared);
+      });
+    });
+  }catch(e){}
+  // 스크립트가 런타임에 붙이는 상태 클래스(.is-stuck 등)는 정적 DOM 에 없다.
+  // 페이지 자신의 스크립트에 이름이 나오면 살아 있는 것으로 본다.
+  var js = Array.prototype.map.call(D.querySelectorAll("script:not([src])"), function(t){
+    return t.textContent;
+  }).join("\n");
+  declared.forEach(function(c){
+    if(used.has(c)) return;
+    if(js.indexOf(c) !== -1) return;   // 런타임에 붙는 클래스
+    res.dead.push({ what:"."+c, detail:"선언됐지만 쓰이지 않음" });
+  });
+
+  return res;
+}
+
+function collectClasses(rule, out){
+  if(rule.selectorText){
+    var m = rule.selectorText.match(/\.[-_a-zA-Z][-_a-zA-Z0-9]*/g);
+    if(m) m.forEach(function(c){ out.add(c.slice(1)); });
+  }
+  if(rule.cssRules) Array.prototype.forEach.call(rule.cssRules, function(r){ collectClasses(r, out); });
+}
+
+function sel(el){
+  if(el.id) return "#" + el.id;
+  var c = (el.getAttribute("class") || "").trim().split(/\s+/)[0];
+  return c ? "." + c : el.tagName.toLowerCase();
+}
+
+/* ── 스크롤 상태 전환 검증 ──────────────────────────────────────────
+   고정 헤더처럼 스크롤에 따라 모습이 바뀌는 요소가 있다.
+   자동화된 탭은 백그라운드로 렌더돼서 IntersectionObserver 가 아예 안 불린다.
+   그래서 "동작하는지 확인 못 함"으로 네 번 연속 넘어갔다.
+
+   렌더링을 기다리는 대신 **관찰자를 가로챈다.**
+   페이지 스크립트보다 먼저 IntersectionObserver 를 가짜로 바꿔치기해 두고,
+   여기서 직접 콜백을 불러 DOM 이 어떻게 변하는지 본다.
+   화면이 그려지지 않아도 상태 기계는 그대로 돌아간다.
+------------------------------------------------------------------ */
+var IO_STUB =
+  '<script>(function(){' +
+  'window.__io=[];' +
+  'window.IntersectionObserver=function(cb,opts){' +
+  'var rec={cb:cb,opts:opts||{},targets:[]};window.__io.push(rec);' +
+  'return{observe:function(el){rec.targets.push(el)},unobserve:function(){},' +
+  'disconnect:function(){},takeRecords:function(){return[]}}};' +
+  'window.__fire=function(i,hit){var r=window.__io[i];if(!r)return;' +
+  'r.cb(r.targets.map(function(t){return{isIntersecting:hit,target:t,' +
+  'intersectionRatio:hit?1:0,boundingClientRect:t.getBoundingClientRect()}}),null)};' +
+  '})();<\/script>';
+
+function classSnapshot(D){
+  return Array.prototype.map.call(D.querySelectorAll("*"), function(e){
+    return e.getAttribute("class") || "";
+  });
+}
+function diffClasses(D, before, after){
+  var els = D.querySelectorAll("*"), out = [];
+  for(var i = 0; i < els.length; i++){
+    if(before[i] !== after[i]){
+      out.push({ el: sel(els[i]), from: before[i] || "(없음)", to: after[i] || "(없음)" });
+    }
+  }
+  return out;
+}
+
+async function auditStateMachine(src){
+  var url = new URL(src, location.href);
+  var html;
+  try{
+    html = await (await fetch(url.href + (url.search ? "&" : "?") + "sm=" + Date.now())).text();
+  }catch(e){
+    return { error: "시안을 불러오지 못했습니다: " + e.message };
+  }
+  var base = url.href.replace(/[^/]*$/, "");
+  // <base> 로 상대 경로를 살리고, 페이지 스크립트보다 먼저 스텁을 넣는다
+  html = html.replace(/<head([^>]*)>/i, '<head$1><base href="' + base + '">' + IO_STUB);
+
+  return await new Promise(function(res){
+    var f = document.createElement("iframe");
+    f.className = "frame"; f.width = 1280; f.height = 900;
+    f.srcdoc = html;
+    document.body.appendChild(f);
+    f.onload = function(){
+      setTimeout(function(){
+        var D = f.contentDocument, W = f.contentWindow;
+        var io = W.__io || [];
+
+        // srcdoc 은 origin 이 null 이고 URL 이 about:srcdoc 이라
+        // BrowserRouter 같은 클라이언트 라우터가 URL 파싱에 실패한다.
+        // 그러면 앱이 아예 렌더되지 않는데, 그걸 "관찰자 없음" 으로 읽으면
+        // 검사하지 못한 것을 통과로 보고하게 된다. 그게 가장 위험하다.
+        var rendered = D.body && D.body.querySelectorAll("header,main,footer,[data-parity]").length > 0;
+        if(!rendered){ f.remove(); return res({ unrendered: true }); }
+        if(!io.length){ f.remove(); return res({ observers: [] }); }
+
+        var report = io.map(function(rec, i){
+          var before = classSnapshot(D);
+          W.__fire(i, false);                     // 관찰 대상이 화면 밖으로 나갔다
+          var out = classSnapshot(D);
+          var changed = diffClasses(D, before, out);
+          W.__fire(i, true);                      // 다시 들어왔다
+          var back = classSnapshot(D);
+          var restored = diffClasses(D, before, back).length === 0;
+          return {
+            index: i,
+            target: rec.targets.map(function(t){ return sel(t); }).join(", ") || "(없음)",
+            rootMargin: rec.opts.rootMargin || "0px",
+            threshold: String(rec.opts.threshold === undefined ? 0 : rec.opts.threshold),
+            changed: changed,
+            restored: restored
+          };
+        });
+        f.remove();
+        res({ observers: report });
+      }, 400);
+    };
+  });
+}
+
+/* ── 실행 ───────────────────────────────────────────────────────── */
+var CHECKS = [
+  { key:"hScroll",  title:"가로 스크롤",        hard:true,  hint:"어느 폭에서도 문서가 가로로 넘치면 안 됩니다." },
+  { key:"overflow", title:"뷰포트 이탈 요소",    hard:true,  hint:"화면 밖으로 나간 요소입니다. 가로 스크롤이 없어도 잘려 보입니다." },
+  { key:"contrast", title:"명도비 — 확정",       hard:true,  hint:"불투명한 배경 위의 글자입니다. 값이 확정되므로 미달은 곧 결함입니다. 본문 4.5:1, 큰 글자 3:1. 비활성 컨트롤(<code>disabled</code>)은 WCAG 1.4.3 이 면제하므로 제외합니다 — 다만 눌러야 하는지 모를 만큼 흐리면 그건 따로 판단하세요." },
+  { key:"zeroSize", title:"크기가 0 인 조작 요소", hard:true,  hint:"버튼·링크가 0×0 으로 렌더됐습니다. 대개 클래스는 붙였는데 그 CSS 규칙이 없을 때 생깁니다. 보이지 않으니 눈으로도, 다른 검사로도 잡히지 않습니다." },
+  { key:"tapFail",  title:"터치 타깃 24px 미만", hard:true,  hint:"WCAG 2.5.8(AA) 최소 기준입니다." },
+  { key:"tiny",     title:"글자 12px 미만",      hard:true,  hint:"읽는 카피의 하한입니다. 제품 UI 일러스트는 예외 선택자로 빼세요." },
+  { key:"focus",    title:"포커스 링",          hard:true,  hint:"안티패턴 '포커스 제거'. 검정 면 위에서는 링 색을 뒤집어야 합니다." },
+  { key:"tapWarn",  title:"터치 타깃 44px 미만", hard:false, hint:"모바일 폭 권고입니다. 주요 내비·CTA 는 44px 를 지키고, 밀집 정보 링크는 24px 로 둘 수 있습니다 — 그 예외는 규칙에 적으세요." },
+  { key:"contrastFloat", title:"명도비 — 배경 의존", hard:false, hint:"고정·반투명 요소라 뒤에 무엇이 오는지 도구가 알 수 없습니다. 흰 바닥과 검은 바닥을 각각 재서 <b>범위</b>로 보고합니다. 이 요소가 지나가는 실제 면에서 최악값이 나오는지 사람이 확인하세요 — 고정 헤더가 어두운 섹션 위를 지날 때가 대표적입니다." },
+  { key:"dead",     title:"죽은 CSS",           hard:false, hint:"이 시안의 &lt;style&gt; 에 선언됐지만 아무 요소도 쓰지 않는 클래스입니다. 공용 tokens.css 는 여러 시안이 나눠 쓰므로 제외합니다." }
+];
+
+function loadAt(src, w, state){
+  return new Promise(function(res){
+    var f = document.createElement("iframe");
+    f.className = "frame"; f.width = w; f.height = 900;
+    f.src = src + (src.indexOf("?") < 0 ? "?" : "&") + "audit=" + Date.now() + Math.random();
+    document.body.appendChild(f);
+    f.onload = function(){
+      // tokens.css 가 캐시되어 옛 값으로 재는 것을 막는다
+      try{
+        var link = f.contentDocument.querySelector('link[rel=stylesheet]');
+        if(link) link.href = link.getAttribute("href") + "?audit=" + Date.now() + Math.random();
+      }catch(e){}
+      setTimeout(function(){
+        try{
+          // 전환이 진행되지 않는 환경(백그라운드 탭)에서도 목표 값을 읽게 전환을 끈다
+          var kill = f.contentDocument.createElement("style");
+          kill.textContent = "*,*::before,*::after{transition:none!important;animation:none!important}";
+          f.contentDocument.head.appendChild(kill);
+          // 진입 모션의 시작 상태를 걷어낸다. 안 그러면 관찰자가 안 도는 환경에서
+          // 콘텐츠가 opacity:0 인 채로 측정되어 **검사를 통째로 건너뛴다.**
+          // 반드시 kill 스타일을 붙인 뒤에 지운다 — 먼저 지우면 전환이 시작되고,
+          // 전환이 진행되지 않는 환경에서는 계산값이 0 에 멈춘 채로 읽힌다.
+          f.contentDocument.documentElement.classList.remove("js-reveal");
+          // 상태 지시문. `;` 로 여러 개를 준다.
+          //   .site-header:is-stuck   → 클래스를 붙인다
+          //   open:#askSheet          → <dialog> 를 연다 (닫힌 시트 안은 측정되지 않는다)
+          state.split(";").forEach(function(one){
+            one = one.trim();
+            if(!one) return;
+            if(one.indexOf("open:") === 0){
+              var dlg = f.contentDocument.querySelector(one.slice(5).trim());
+              if(dlg && dlg.showModal) dlg.showModal();
+              return;
+            }
+            var parts = one.split(":");
+            var cls = parts.pop().trim();
+            var node = f.contentDocument.querySelector(parts.join(":").trim());
+            if(node) node.classList.add(cls);
+          });
+        }catch(e){}
+        setTimeout(function(){ res(f); }, 120);
+      }, 550);
+    };
+  });
+}
+
+document.getElementById("run").addEventListener("click", async function(){
+  var btn = this;
+  btn.disabled = true; btn.textContent = "검수 중…";
+  var target = document.getElementById("target").value.trim();
+  var widths = document.getElementById("widths").value.split(",")
+      .map(function(s){ return parseInt(s.trim(),10); }).filter(function(n){ return n > 0; });
+  var exempt = document.getElementById("exempt").value.trim();
+  var state = document.getElementById("state").value.trim();
+
+  var byWidth = {};
+  for(var i = 0; i < widths.length; i++){
+    var w = widths[i];
+    var f = await loadAt(target, w, state);
+    try{
+      byWidth[w] = auditOne(f.contentDocument, f.contentWindow, f.contentWindow.innerWidth, exempt);
+    }catch(e){
+      byWidth[w] = { error: String(e && e.message || e) };
+    }
+    f.remove();
+  }
+  var sm = await auditStateMachine(target);
+  render(byWidth, widths, target, sm);
+  btn.disabled = false; btn.textContent = "검수 실행";
+});
+
+function render(byWidth, widths, target, sm){
+  var out = document.getElementById("out");
+  var hardFail = 0, softFail = 0;
+
+  CHECKS.forEach(function(c){
+    widths.forEach(function(w){
+      var r = byWidth[w] && byWidth[w][c.key];
+      if(r && r.length){ if(c.hard) hardFail += r.length; else softFail += r.length; }
+    });
+  });
+
+  var html = '<div class="score">' +
+    '<div class="tile ' + (hardFail ? "fail" : "pass") + '"><b>' + (hardFail ? hardFail + "건" : "통과") + "</b><span>필수 항목</span></div>" +
+    '<div class="tile ' + (softFail ? "warn" : "pass") + '"><b>' + (softFail ? softFail + "건" : "없음") + "</b><span>권고 항목</span></div>" +
+    '<div class="tile"><b>' + widths.length + "</b><span>확인한 폭</span></div>" +
+    "</div>";
+
+  CHECKS.forEach(function(c){
+    var rows = "", n = 0;
+    widths.forEach(function(w){
+      var r = (byWidth[w] || {})[c.key] || [];
+      r.forEach(function(item){
+        n++;
+        var swatch = item.fg
+          ? '<span class="swatch" style="background:' + item.fg + '"></span>' + item.fg +
+            ' <span class="swatch" style="background:' + item.bg + '"></span>' + item.bg
+          : "";
+        rows += '<tr class="' + (c.hard ? "bad" : "warn") + '"><td class="mono">' + w + "</td>" +
+                "<td>" + esc(item.what) + (item.sel ? ' <span style="color:var(--muted)">' + esc(item.sel) + "</span>" : "") + "</td>" +
+                '<td class="mono">' + esc(item.detail) + "</td>" +
+                "<td>" + swatch + (item.note ? ' <span style="color:var(--muted)">' + esc(item.note) + "</span>" : "") + "</td></tr>";
+      });
+    });
+    var badge = n ? '<span class="badge ' + (c.hard ? "bad" : "warn") + '">' + n + "건</span>"
+                  : '<span class="badge ok">통과</span>';
+    html += '<details class="check"' + (n ? " open" : "") + "><summary>" + c.title + badge + "</summary>" +
+            '<p class="hint">' + c.hint + "</p>" +
+            (n ? '<table><thead><tr><th class="mono">폭</th><th>대상</th><th class="mono">값</th><th>색</th></tr></thead><tbody>' + rows + "</tbody></table>"
+               : '<p class="empty">지적사항 없음</p>') +
+            "</details>";
+  });
+
+  // ── 스크롤 상태 전환 ──────────────────────────────────
+  var obs = (sm && sm.observers) || [];
+  var smBad = 0, smRows = "";
+  if(sm && sm.unrendered){
+    smRows = '<tr class="warn"><td colspan="4">이 하네스에서 페이지가 렌더되지 않았습니다 — ' +
+      '<b>확인하지 못했습니다.</b> 클라이언트 라우터를 쓰는 SPA 는 <code>srcdoc</code>(origin null)에서 ' +
+      'URL 파싱에 실패해 앱이 뜨지 않습니다. 시안 HTML 로는 검증되지만 <b>구현은 사람이 브라우저에서 확인</b>해야 합니다.</td></tr>';
+  } else if(sm && sm.error){
+    smBad = 1;
+    smRows = '<tr class="bad"><td colspan="4">' + esc(sm.error) + "</td></tr>";
+  }else{
+    obs.forEach(function(o){
+      var dead = o.changed.length === 0;
+      if(dead) smBad++;
+      var what = dead
+        ? "관찰자가 등록됐지만 상태가 바뀌지 않습니다 — 배선이 끊겼습니다"
+        : o.changed.map(function(c){ return c.el + " : " + c.from + " → " + c.to; }).join("<br>");
+      smRows += '<tr class="' + (dead ? "bad" : "") + '"><td class="mono">#' + o.index + "</td>" +
+                "<td>" + esc(o.target) + "</td>" +
+                '<td class="mono">rootMargin ' + esc(o.rootMargin) + "<br>threshold " + esc(o.threshold) + "</td>" +
+                "<td>" + what + (dead ? "" : (o.restored ? '<br><span style="color:var(--ok)">되돌아옴 ✓</span>'
+                                                        : '<br><span style="color:var(--bad)">되돌아오지 않음</span>')) + "</td></tr>";
+    });
+  }
+  hardFail += smBad;
+  var smBadge = (sm && sm.unrendered)
+    ? '<span class="badge warn">확인 못 함</span>'
+    : (obs.length === 0 && !(sm && sm.error)
+        ? '<span class="badge ok">해당 없음</span>'
+        : (smBad ? '<span class="badge bad">' + smBad + "건</span>"
+                 : '<span class="badge ok">' + obs.length + "개 정상</span>"));
+
+  html += '<details class="check"' + (smBad || (sm && sm.unrendered) ? " open" : "") + "><summary>스크롤 상태 전환" + smBadge + "</summary>" +
+    '<p class="hint">고정 헤더처럼 스크롤에 따라 바뀌는 요소입니다. 백그라운드 탭에서는 ' +
+    '<code>IntersectionObserver</code> 가 불리지 않으므로, <b>관찰자를 가로채 콜백을 직접 호출</b>해 ' +
+    'DOM 이 실제로 바뀌는지 봅니다. 렌더링 없이도 상태 기계는 검증됩니다.<br>' +
+    '<b>여전히 사람이 볼 것</b> — 전환이 <i>어느 스크롤 위치에서</i> 일어나는지의 체감과 모션의 속도.</p>' +
+    (smRows
+      ? '<table><thead><tr><th class="mono">#</th><th>관찰 대상</th><th class="mono">옵션</th><th>전환 결과</th></tr></thead><tbody>' + smRows + "</tbody></table>"
+      : '<p class="empty">스크롤 연동 상태 전환이 없습니다.</p>') +
+    "</details>";
+
+  // 점수 타일을 다시 그린다 (상태 전환 실패를 반영)
+  html = html.replace(/<div class="tile (?:fail|pass)"><b>[^<]*<\/b><span>필수 항목<\/span><\/div>/,
+    '<div class="tile ' + (hardFail ? "fail" : "pass") + '"><b>' +
+    (hardFail ? hardFail + "건" : "통과") + "</b><span>필수 항목</span></div>");
+
+  html += '<p class="note"><b>이 도구가 못 보는 것.</b> 모션의 <b>속도와 체감</b>, 그리고 전환이 ' +
+          '<b>어느 스크롤 위치에서</b> 일어나는지는 잴 수 없습니다. 상태 기계가 도는 것과 ' +
+          '그 타이밍이 자연스러운 것은 다른 문제입니다. ' +
+          '측정 전에 전환을 꺼서 목표 값은 정확히 읽으므로, 색과 크기는 여기 결과를 믿어도 됩니다. ' +
+          '검수하지 못한 항목은 <b>change-log.md 에 못 했다고 적으세요.</b></p>';
+
+  out.innerHTML = html;
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
+  });
+}
+})();
+</script>
+</body>
+</html>

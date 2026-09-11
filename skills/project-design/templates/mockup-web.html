@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{화면명}} — 시안</title>
+<!--
+  3단계 시안. Docs/_design/mockups/ 에 둔다.
+  - 토큰은 ../tokens.css 한 곳에만 있다. 시안마다 값을 복사하면 반드시 어긋난다
+  - 이 시안에만 필요한 스타일은 아래 <style> 에 둔다
+  - 폰트·이미지를 외부에서 불러오지 않는다
+  - 실제 카피를 쓴다. Lorem ipsum 금지
+  - 없는 실적·고객사·수치를 만들지 않는다
+-->
+<link rel="stylesheet" href="../tokens.css">
+<style>
+/* 이 시안에만 해당하는 스타일 */
+section{padding:var(--section-y) 0}
+.alt{background:var(--bg-subtle)}
+</style>
+</head>
+<body>
+
+<!-- ── 여기부터 화면 정의서의 섹션 순서대로 ─────────────── -->
+<section>
+  <div class="container">
+    <p class="eyebrow">{{Eyebrow}}</p>
+    <h1>{{확정 카피 — 화면 정의서에서 그대로}}</h1>
+    <p class="lead">{{서브카피}}</p>
+    <a class="btn btn-primary" href="#">{{Primary CTA}}</a>
+    <a class="btn btn-secondary" href="#">{{Secondary CTA}}</a>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="container">
+    <h2>{{다음 섹션}}</h2>
+    <p class="lead">{{내용}}</p>
+  </div>
+</section>
+<!-- ─────────────────────────────────────────────────── -->
+
+<div class="mockup-flag">시안 · {{YYYY-MM-DD}}</div>
+</body>
+</html>

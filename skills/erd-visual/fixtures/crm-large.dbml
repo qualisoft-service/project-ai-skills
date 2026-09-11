@@ -1,0 +1,1337 @@
+// ═══════════════════════════════════════════════════════════════
+// TSNE Dynamics 365 CRM — ERD
+// 원본  _자료/CRM_Entity_DOC260824_ExcelAll.xlsx (2026-08-24 추출)
+//       _자료/SiteMap_260824.XML  — 업무 영역 그룹의 근거
+// 생성  2026-08-31
+//
+// 엔티티 75 · 속성 1393 · 단일 대상 FK 202
+//
+// [ 사실 근거 ]
+//  · 관계는 Metadata 시트의 Lookup 속성 "Targets:" 값에서만 도출했다.
+//    추측으로 만든 관계는 하나도 없다.
+//  · 대상이 여러 개인 다형 참조(Owner·Customer·regardingobjectid 등)는
+//    DBML 이 단일 Ref 만 표현하므로 Ref 로 그리지 않고 컬럼 주석에 대상을 모두 적었다.
+//    임의로 하나를 골라 선을 긋지 않았다.
+//  · 컬럼은 전체가 아니라 "관계와 필수"만 실었다 —
+//    기본키 · 이름 속성 · 모든 FK · 필수(ApplicationRequired/SystemRequired) · 상태.
+//    표에 실리지 않은 속성 수는 각 Table Note 의 "총 속성" 과 대조하면 알 수 있다.
+// ═══════════════════════════════════════════════════════════════
+
+// ─── 영업_SFA : 영업 — 고객·기회·제품 ─────────────────
+
+Table account {
+  accountid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(160) [not null, note: '거래처명']
+  new_9l_enguser09 uniqueidentifier [note: '기술담당자9 → systemuser']
+  new_l_contract_contact uniqueidentifier [note: '계약담당자 → contact']
+  new_l_engineer uniqueidentifier [note: '기술담당자 → systemuser']
+  new_l_enguser02 uniqueidentifier [note: '기술담당자2 → systemuser']
+  new_l_enguser03 uniqueidentifier [note: '기술담당자3 → systemuser']
+  new_l_enguser04 uniqueidentifier [note: '기술담당자4 → systemuser']
+  new_l_enguser05 uniqueidentifier [note: '기술담당자5 → systemuser']
+  new_l_enguser06 uniqueidentifier [note: '기술담당자6 → systemuser']
+  new_l_enguser07 uniqueidentifier [note: '기술담당자7 → systemuser']
+  new_l_enguser08 uniqueidentifier [note: '기술담당자8 → systemuser']
+  new_l_enguser10 uniqueidentifier [note: '기술담당자10 → systemuser']
+  new_l_keyuser uniqueidentifier [note: 'Key User → contact']
+  new_l_owner02 uniqueidentifier [note: '영업담당자2 → systemuser']
+  new_l_sbs1 uniqueidentifier [note: '영업담당자1 사업부 → businessunit']
+  new_l_sbs2 uniqueidentifier [note: '영업담당자2 사업부 → businessunit']
+  new_l_tbs1 uniqueidentifier [note: '기술담당자1 사업부 → businessunit']
+  new_l_tbs2 uniqueidentifier [note: '기술담당자 2 사업부 → businessunit']
+  new_l_tbs3 uniqueidentifier [note: '기술담당자3 사업부 → businessunit']
+  new_l_tbs4 uniqueidentifier [note: '기술담당자4 사업부 → businessunit']
+  new_l_tbs5 uniqueidentifier [note: '기술담당자5 사업부 → businessunit']
+  new_taxmanager uniqueidentifier [note: '세금계산서 담당자 → contact']
+  originatingleadid uniqueidentifier [note: '원래 잠재 고객 → lead']
+  ownerid uniqueidentifier [not null, note: '영업담당자 → 다형: systemuser, team']
+  parentaccountid uniqueidentifier [note: '상위 거래처 → account']
+  primarycontactid uniqueidentifier [note: '기본 연락처 → contact']
+  transactioncurrencyid uniqueidentifier [note: '통화 → transactioncurrency']
+  address1_line1 nvarchar(250) [not null, note: '도로명 주소']
+  customertypecode int [not null, note: '거래처유형 [Choice]']
+  industrycode int [not null, note: '적용분야 [Choice]']
+  new_p_grade int [not null, note: '고객등급 [Choice]']
+  new_txt_engname nvarchar(100) [not null, note: '거래처명(영문)']
+  statecode int [not null, note: '상태 [State]']
+  Note: '거래처 (Account) · 표준 · 총 속성 82개 · 표시 34개\n고객 회사 또는 잠재 고객 회사를 나타내며, 비즈니스 거래에서 청구 대상이 되는 회사입니다.'
+}
+
+Table contact {
+  contactid uniqueidentifier [pk, not null, note: '기본 키']
+  fullname nvarchar(160) [note: '전체 이름']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  originatingleadid uniqueidentifier [note: '원래 잠재 고객 → lead']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  parentcustomerid uniqueidentifier [not null, note: '소속 거래처 → 다형: account, contact']
+  transactioncurrencyid uniqueidentifier [note: '통화 → transactioncurrency']
+  emailaddress1 nvarchar(100) [not null, note: '전자 메일']
+  firstname nvarchar(50) [not null, note: '이름']
+  lastname nvarchar(50) [not null, note: '성']
+  mobilephone nvarchar(50) [not null, note: '휴대폰']
+  new_p_dmtype int [not null, note: 'DM타입 [Choice]']
+  new_user_division int [not null, note: '사용자 분류 [Choice]']
+  Note: '연락처 (Contact) · 표준 · 총 속성 53개 · 표시 13개\n사업부와 관계가 있는 사람(예: 고객, 공급자, 동료)입니다.'
+}
+
+Table lead {
+  leadid uniqueidentifier [pk, not null, note: '기본 키']
+  fullname nvarchar(160) [note: '이름']
+  campaignid uniqueidentifier [note: '원본 캠페인 → campaign']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  transactioncurrencyid uniqueidentifier [note: '통화 → transactioncurrency']
+  lastname nvarchar(100) [not null, note: '성명']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '잠재 고객 (Lead) · 표준 · 총 속성 47개 · 표시 8개\n잠재 고객 또는 잠재 영업 기회입니다. 우량 잠재 고객은 거래처, 연락처 또는 영업 기회로 변환되고 그렇지 않은 잠재 고객은 삭제되거나 보관됩니다.'
+}
+
+Table opportunity {
+  opportunityid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(300) [not null, note: '영업기회명']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  customerid uniqueidentifier [not null, note: 'xxx-거래처 → 다형: account, contact']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_contact uniqueidentifier [not null, note: '고객명 → contact']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  parentaccountid uniqueidentifier [not null, note: '거래처 → account']
+  parentcontactid uniqueidentifier [note: '연락처 → contact']
+  pricelevelid uniqueidentifier [note: '가격표 → pricelevel']
+  transactioncurrencyid uniqueidentifier [not null, note: '통화 → transactioncurrency']
+  estimatedclosedate datetime [not null, note: '예상 종료 날짜']
+  new_p_step int [not null, note: '영업기회 단계 [Choice]']
+  new_p_type int [not null, note: '타입 [Choice]']
+  statecode int [not null, note: '상태 [State]']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '영업 기회 (Opportunity) · 표준 · 총 속성 47개 · 표시 16개\n거래처에 대한 잠재적 매출 창출 이벤트나 영업으로서, 완료될 때까지 영업 프로세스를 통해 추적해야 합니다.'
+}
+
+Table new_opptyproduct {
+  new_opptyproductid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_custom uniqueidentifier [note: 'Account → 다형: account, contact']
+  new_l_oppty uniqueidentifier [not null, note: '영업기회 → opportunity']
+  new_product uniqueidentifier [not null, note: '제품 → new_product']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '영업기회 제품 (new_opptyproduct) · 커스텀 · 총 속성 6개 · 표시 6개'
+}
+
+Table new_product {
+  new_productid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(86) [not null, note: '제품명']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_i_glistprice decimal [not null, note: '[국외-PO용]List Price']
+  new_i_price decimal [not null, note: '[국내]List Price']
+  statecode int [not null, note: '상태 [State]']
+  Note: '제품관리 (new_product) · 커스텀 · 총 속성 23개 · 표시 6개'
+}
+
+Table new_machine {
+  new_machineid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: 'Flex ID']
+  new_l_acct uniqueidentifier [note: '거래처명 → account']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '장비관리 (new_machine) · 커스텀 · 총 속성 18개 · 표시 5개'
+}
+
+Table new_eachaccount {
+  new_eachaccountid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_account uniqueidentifier [not null, note: '#Account → new_account']
+  new_l_acct uniqueidentifier [not null, note: '거래처 → account']
+  Note: '거래처별#Account (new_eachaccount) · 커스텀 · 총 속성 3개 · 표시 4개'
+}
+
+Table list {
+  listid uniqueidentifier [pk, not null, note: '기본 키']
+  listname nvarchar(128) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  transactioncurrencyid uniqueidentifier [note: '통화 → transactioncurrency']
+  createdfromcode int [not null, note: '마케팅 목록 구성원 유형 [Choice]']
+  type bit [not null, note: '유형']
+  Note: '마케팅 목록 (List) · 표준 · 총 속성 12개 · 표시 6개\n마케팅 캠페인 또는 기타 영업 목적을 위해 만들어진 기존 고객이나 잠재 고객의 그룹입니다.'
+}
+
+// 영업 — 고객·기회·제품
+TableGroup "영업 SFA" {
+  account
+  contact
+  lead
+  opportunity
+  new_opptyproduct
+  new_product
+  new_machine
+  new_eachaccount
+  list
+}
+
+// ─── 견적_계약 : 견적 · 계약 — 수주까지 ────────────────
+
+Table new_quot {
+  new_quotid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_account uniqueidentifier [note: '소속기관 → account']
+  new_l_contact uniqueidentifier [note: '고객명 → contact']
+  new_l_copy_source uniqueidentifier [note: 'copy source → new_quot']
+  new_l_oppty uniqueidentifier [note: '관련 영업기회 → opportunity']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_txt_quottitle nvarchar(100) [not null, note: '견적명']
+  Note: '견적 (new_quot) · 커스텀 · 총 속성 21개 · 표시 8개\n견적마스터'
+}
+
+Table new_quot_details {
+  new_quot_detailsid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_quot uniqueidentifier [note: 'Quot No → new_quot']
+  new_l_quot_main_g uniqueidentifier [note: '관련 유지보수 분류 (대) → new_quot_main_g']
+  new_l_quot_main_g2 uniqueidentifier [note: '관련 유지보수 분류 (중) → new_quot_main_g']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '견적 상세 (new_quot_details) · 커스텀 · 총 속성 19개 · 표시 6개'
+}
+
+Table new_quotunit {
+  new_quotunitid uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '견적 제품 (new_quotunit) · 커스텀 · 총 속성 0개 · 표시 1개'
+}
+
+Table new_quot_pdf {
+  new_quot_pdfid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_quotation uniqueidentifier [note: 'Quotation → new_quot']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '견적 PDF (new_quot_pdf) · 커스텀 · 총 속성 6개 · 표시 4개'
+}
+
+Table new_quot_main_g {
+  new_quot_main_gid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_largegroup uniqueidentifier [note: '대분류 → new_quot_main_g']
+  new_l_quot uniqueidentifier [note: '관련 견적 → new_quot']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_ntxt_desc nvarchar(max) [not null, note: '비고']
+  new_p_group int [not null, note: '분류 [Choice]']
+  Note: '견적 유지보수 분류 (new_quot_main_g) · 커스텀 · 총 속성 13개 · 표시 7개'
+}
+
+Table new_contract {
+  new_contractid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(200) [not null, note: '계약명']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [not null, note: '거래처 → account']
+  new_l_basiccontract uniqueidentifier [note: 'Copy Source → new_contract']
+  new_l_calculate_contact uniqueidentifier [note: '계산서담당 → contact']
+  new_l_contract uniqueidentifier [note: '계약업체 → account']
+  new_l_contractuser uniqueidentifier [note: '계약업체담당 → contact']
+  new_l_engineer uniqueidentifier [note: '기술담당자 → systemuser']
+  new_l_exchange uniqueidentifier [note: '환율적용 → new_exchange']
+  new_l_machine uniqueidentifier [note: '관련장비 → new_machine']
+  new_l_username uniqueidentifier [note: '사용자 → contact']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_dt_contract datetime [not null, note: '계약일자']
+  statecode int [not null, note: '상태 [State]']
+  Note: '계약관리 (new_contract) · 커스텀 · 총 속성 65개 · 표시 16개\n계약마스터'
+}
+
+Table new_contract_product {
+  new_contract_productid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '계약제품명']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [note: '거래처 → account']
+  new_l_contract uniqueidentifier [note: '계약서명 → new_contract']
+  new_l_product uniqueidentifier [note: '제품 → new_product']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '계약제품 (new_contract_product) · 커스텀 · 총 속성 33개 · 표시 8개'
+}
+
+// 견적 · 계약 — 수주까지
+TableGroup "견적 계약" {
+  new_quot
+  new_quot_details
+  new_quotunit
+  new_quot_pdf
+  new_quot_main_g
+  new_contract
+  new_contract_product
+}
+
+// ─── 정산_구매 : 정산 · 구매 — 계산서·수금·PO ───────────
+
+Table new_taxinvoice {
+  new_taxinvoiceid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(450) [note: '세금계산서명']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_addressee uniqueidentifier [not null, note: '수신자 성명 → contact']
+  new_l_acct uniqueidentifier [not null, note: '발행업체 → account']
+  new_l_contract uniqueidentifier [note: '관련 계약 → new_contract']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_i_day int [not null, note: '일수']
+  new_p_pay int [not null, note: '결제조건 [Choice]']
+  statecode int [not null, note: '상태 [State]']
+  Note: '세금계산서 (new_taxInvoice) · 커스텀 · 총 속성 23개 · 표시 11개'
+}
+
+Table new_taxinvoicehistory {
+  new_taxinvoicehistoryid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_income uniqueidentifier [note: '관련 계산서 세부내역 → new_income']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '세금계산서 발행 이력 (new_taxinvoicehistory) · 커스텀 · 총 속성 4개 · 표시 4개'
+}
+
+Table new_income {
+  new_incomeid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(450) [note: '세금계산서 품목']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [not null, note: '발행업체 → account']
+  new_l_addressee uniqueidentifier [note: '수신자 성명 → contact']
+  new_l_taxinvoice uniqueidentifier [not null, note: '세금계산서 → new_taxinvoice']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_d_danga decimal [not null, note: '단가']
+  new_dt_writedate datetime [not null, note: '작성일자(발행예정일)']
+  new_i_count int [not null, note: '수량']
+  new_p_count int [not null, note: '회차 [Choice]']
+  new_p_purposetype int [not null, note: '영수/청구 [Choice]']
+  new_p_taxtype int [not null, note: '과세형태 [Choice]']
+  new_txt_mgkey nvarchar(100) [not null, note: '계산서 관리번호']
+  statecode int [not null, note: '상태 [State]']
+  Note: '계산서 세부내역 (new_income) · 커스텀 · 총 속성 65개 · 표시 16개'
+}
+
+Table new_po {
+  new_poid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_acct uniqueidentifier [note: '거래처 → account']
+  new_l_contract uniqueidentifier [note: '계약서명 → new_contract']
+  new_l_contract_product uniqueidentifier [not null, note: '계약제품 → new_contract_product']
+  new_l_product uniqueidentifier [note: '제품명 → new_product']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_p_ansysshare int [not null, note: 'ANSYS Share [Choice]']
+  statecode int [not null, note: '상태 [State]']
+  Note: 'PO 관리 (new_po) · 커스텀 · 총 속성 31개 · 표시 9개'
+}
+
+Table new_exchange {
+  new_exchangeid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '환율적용월명']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_dt_exchange datetime [not null, note: '환율적용월']
+  statecode int [not null, note: '상태 [State]']
+  Note: '환율관리 (new_exchange) · 커스텀 · 총 속성 5개 · 표시 5개'
+}
+
+// 정산 · 구매 — 계산서·수금·PO
+TableGroup "정산 구매" {
+  new_taxinvoice
+  new_taxinvoicehistory
+  new_income
+  new_po
+  new_exchange
+}
+
+// ─── 라이선스 : 라이선스 · 자산 ─────────────────────
+
+Table new_licensekey {
+  new_licensekeyid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: 'License명']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [not null, note: '거래처 → account']
+  new_l_addressee uniqueidentifier [note: '추가수신자 → systemuser']
+  new_l_approvaluser uniqueidentifier [note: '발급담당 → systemuser']
+  new_l_contact uniqueidentifier [note: '연락처 → contact']
+  new_l_contract uniqueidentifier [note: '관련계약 → new_contract']
+  new_l_exchange uniqueidentifier [note: '환율적용 → new_exchange']
+  new_l_machine uniqueidentifier [note: '관련 장비 → new_machine']
+  new_l_machine2 uniqueidentifier [note: '관련 장비 2 → new_machine']
+  new_l_machine3 uniqueidentifier [note: '관련 장비 3 → new_machine']
+  new_l_oppty uniqueidentifier [note: '영업기회 → opportunity']
+  ownerid uniqueidentifier [not null, note: 'License신청자 → 다형: systemuser, team']
+  new_dt_closingdate datetime [not null, note: 'Closing Date']
+  new_ntxt_engreason nvarchar(max) [not null, note: '신청사유(영문)']
+  new_p_pipeline int [not null, note: 'Pipeline 정보 [Choice]']
+  new_p_status int [not null, note: 'Status [Choice]']
+  new_p_type int [not null, note: '키유형 [Choice]']
+  new_sw_product int [not null, note: 'SW제품명 [Choice]']
+  new_txt_licenseno nvarchar(100) [not null, note: 'Account #']
+  statecode int [not null, note: '상태 [State]']
+  Note: '라이선스키 (new_licensekey) · 커스텀 · 총 속성 55개 · 표시 22개'
+}
+
+Table new_licensekeyproduct {
+  new_licensekeyproductid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_account uniqueidentifier [note: '거래처 → account']
+  new_l_exchange uniqueidentifier [note: '환율적용 → new_exchange']
+  new_l_license uniqueidentifier [not null, note: '라이선스키 → new_licensekey']
+  new_l_product uniqueidentifier [not null, note: '제품 → new_product']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '라이선스키 제품 (new_licensekeyproduct) · 커스텀 · 총 속성 8개 · 표시 7개'
+}
+
+// 라이선스 · 자산
+TableGroup "라이선스" {
+  new_licensekey
+  new_licensekeyproduct
+}
+
+// ─── 컨설팅 : 컨설팅 — 프로젝트 수행 ─────────────────
+
+Table new_project {
+  new_projectid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '제목']
+  new_contract uniqueidentifier [note: '관련계약 → new_contract']
+  new_l_acct uniqueidentifier [not null, note: '거래처명 → account']
+  new_l_oppty uniqueidentifier [note: '관련제품영업기회 → opportunity']
+  new_l_relconsulting uniqueidentifier [note: '관련컨설팅계약 → new_project']
+  new_l_salesman uniqueidentifier [note: '영업담당자 → systemuser']
+  ownerid uniqueidentifier [not null, note: '기술담당자 → 다형: systemuser, team']
+  new_dt_eproject_end datetime [not null, note: '예상 종료일']
+  new_dt_eproject_start datetime [not null, note: '예상 시작일']
+  new_p_secure int [not null, note: '대외비 유무 [Choice]']
+  new_p_status int [not null, note: '진행단계 [Choice]']
+  new_p_type int [not null, note: '컨설팅/BMT 구분 [Choice]']
+  statecode int [not null, note: '상태 [State]']
+  Note: '컨설팅 (new_project) · 커스텀 · 총 속성 44개 · 표시 14개\n프로젝트가 컨설팅으로 변경'
+}
+
+Table new_project_act {
+  new_project_actid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '진행항목']
+  new_l_eng02 uniqueidentifier [note: '기술지원02 → systemuser']
+  new_l_eng03 uniqueidentifier [note: '기술지원03 → systemuser']
+  new_l_eng04 uniqueidentifier [note: '기술지원04 → systemuser']
+  new_l_project uniqueidentifier [not null, note: '관련 컨설팅 → new_project']
+  ownerid uniqueidentifier [not null, note: '기술지원 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '컨설팅 진행항목 (new_project_act) · 커스텀 · 총 속성 13개 · 표시 8개'
+}
+
+Table new_project_activity {
+  new_project_activityid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '주제']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  new_l_project uniqueidentifier [not null, note: '관련 프로젝트 → new_project']
+  new_l_project_act uniqueidentifier [note: '관련 진행항목 → new_project_act']
+  new_l_project_activity uniqueidentifier [note: '다음 작업 → new_project_activity']
+  ownerid uniqueidentifier [not null, note: '업무 수행자 → 다형: systemuser, team']
+  new_dt_finish datetime [not null, note: '실제 종료 날짜']
+  new_dt_start datetime [not null, note: '실제 시작 날짜']
+  Note: '컨설팅 활동 (new_project_activity) · 커스텀 · 총 속성 16개 · 표시 9개'
+}
+
+Table new_projectbiz {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [note: '주제']
+  new_l_businessunit uniqueidentifier [not null, note: '사업부 → businessunit']
+  new_l_project uniqueidentifier [not null, note: '컨설팅 → new_project']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [not null, note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, bulkoperation 외 29']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '컨설팅/BMT 부서관리 (new_projectbiz) · 커스텀·활동 · 총 속성 9개 · 표시 7개'
+}
+
+Table new_pj_person {
+  new_pj_personid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_biz uniqueidentifier [not null, note: '기술지원부서 → businessunit']
+  new_l_project uniqueidentifier [not null, note: '관련 컨설팅 → new_project']
+  new_l_projectbiz uniqueidentifier [not null, note: '컨설팅 부서 → new_projectbiz']
+  new_l_user uniqueidentifier [not null, note: '팀원 → systemuser']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_p_part int [not null, note: '참여율 [Choice]']
+  statecode int [not null, note: '상태 [State]']
+  Note: '투입인원 (new_pj_person) · 커스텀 · 총 속성 13개 · 표시 9개'
+}
+
+Table new_prj_contact {
+  new_prj_contactid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: 'x이름']
+  new_l_acct uniqueidentifier [not null, note: '거래처명 → account']
+  new_l_contact uniqueidentifier [not null, note: '사용자명 → contact']
+  new_l_project uniqueidentifier [not null, note: '참여 프로젝트 → new_project']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '컨설팅 고객 (new_prj_contact) · 커스텀 · 총 속성 7개 · 표시 7개'
+}
+
+Table new_consulting {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  customers partylist [note: '추가고객명 → 참가자 목록(activityparty)']
+  new_l_acct uniqueidentifier [not null, note: '업체명 → account']
+  new_l_contact uniqueidentifier [not null, note: '고객명 → contact']
+  new_l_oppty uniqueidentifier [note: '관련 영업기회 → opportunity']
+  new_l_project uniqueidentifier [note: '관련 컨설팅 → new_project']
+  new_l_project_act uniqueidentifier [note: '관련 진행항목 → new_project_act']
+  optionalattendees partylist [note: '보고자 → 참가자 목록(activityparty)']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, bulkoperation 외 29']
+  requiredattendees partylist [note: '동행자 → 참가자 목록(activityparty)']
+  new_p_type int [not null, note: '약속형태 [Choice]']
+  scheduledstart datetime [not null, note: '약속날짜']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '컨설팅 약속 (new_consulting) · 커스텀·활동 · 총 속성 38개 · 표시 15개'
+}
+
+Table new_consulting_work {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '제목']
+  new_l_consulting_work uniqueidentifier [note: '이전 작업 → new_consulting_work']
+  new_l_project uniqueidentifier [not null, note: '관련 컨설팅 → new_project']
+  new_l_project_act uniqueidentifier [note: '관련 진행항목 → new_project_act']
+  optionalattendees partylist [note: '선택 참석자 → 참가자 목록(activityparty)']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_txt_subject nvarchar(100) [not null, note: '제목']
+  scheduledend datetime [not null, note: '종료일']
+  scheduledstart datetime [not null, note: '시작일']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '컨설팅 작업 (new_consulting_work) · 커스텀·활동 · 총 속성 20개 · 표시 11개'
+}
+
+Table new_consultingoutsourcing {
+  new_consultingoutsourcingid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '외주 업체명']
+  new_l_acct uniqueidentifier [not null, note: '업체명 → account']
+  new_l_relconsulting uniqueidentifier [not null, note: '관련 컨설팅 → new_project']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_i_outsourcingcost int [not null, note: '외주 금액(VAT별도)']
+  Note: '컨설팅 외주 업체 (new_consultingoutsourcing) · 커스텀 · 총 속성 8개 · 표시 6개'
+}
+
+// 컨설팅 — 프로젝트 수행
+TableGroup "컨설팅" {
+  new_project
+  new_project_act
+  new_project_activity
+  new_projectbiz
+  new_pj_person
+  new_prj_contact
+  new_consulting
+  new_consulting_work
+  new_consultingoutsourcing
+}
+
+// ─── 기술지원 : 기술지원 — AS ─────────────────────
+
+Table new_aslist {
+  new_aslistid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '기술지원명']
+  new_l_acct uniqueidentifier [note: '관련거래처 → account']
+  new_l_business uniqueidentifier [note: '지원사업부 → businessunit']
+  new_l_contact uniqueidentifier [not null, note: '지원고객명 → contact']
+  ownerid uniqueidentifier [not null, note: '기술지원자 → 다형: systemuser, team']
+  new_dt_work datetime [not null, note: '접수일자']
+  statecode int [not null, note: '상태 [State]']
+  Note: '기술지원내역 (new_aslist) · 커스텀 · 총 속성 25개 · 표시 8개'
+}
+
+Table new_asact {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '지원 제목']
+  cc partylist [note: '이메일 참조자 → 참가자 목록(activityparty)']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [not null, note: '관련거래처 → account']
+  new_l_business uniqueidentifier [note: '지원사업부 → businessunit']
+  new_l_contact uniqueidentifier [not null, note: '고객명 → contact']
+  ownerid uniqueidentifier [not null, note: '기술지원자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, bulkoperation 외 29']
+  requiredattendees partylist [note: '추가 기술지원자 → 참가자 목록(activityparty)']
+  new_p_product int [not null, note: '지원제품 [Choice]']
+  new_p_type int [not null, note: '지원형태 [Choice]']
+  scheduledstart datetime [not null, note: '접수일자']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '기술지원 활동 (new_asact) · 커스텀·활동 · 총 속성 36개 · 표시 15개'
+}
+
+Table new_asappoint {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  customers partylist [note: '추가고객명 → 참가자 목록(activityparty)']
+  new_l_acct uniqueidentifier [not null, note: '업체명 → account']
+  new_l_contact uniqueidentifier [not null, note: '고객명 → contact']
+  new_l_oppty uniqueidentifier [note: '관련 영업기회 → opportunity']
+  optionalattendees partylist [note: '보고자 → 참가자 목록(activityparty)']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  requiredattendees partylist [note: '동행자 → 참가자 목록(activityparty)']
+  new_p_gigan int [not null, note: '소요기간 [Choice]']
+  new_p_purpose int [not null, note: '방문/내방 목적 [Choice]']
+  new_p_type int [not null, note: '약속장소 [Choice]']
+  scheduledstart datetime [not null, note: '약속날짜']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '기술지원 약속 (new_asappoint) · 커스텀·활동 · 총 속성 35개 · 표시 14개'
+}
+
+Table new_other_asperson {
+  new_other_aspersonid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [note: '이름']
+  new_l_licenseacct uniqueidentifier [not null, note: 'License 보유거래처 → account']
+  new_l_ocontact uniqueidentifier [not null, note: '타부서 사용자 → contact']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '타부서 지원현황 (new_other_asperson) · 커스텀 · 총 속성 7개 · 표시 6개'
+}
+
+Table serviceappointment {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  customers partylist [note: '고객 → 참가자 목록(activityparty)']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_appoint uniqueidentifier [note: '관련 약속 → appointment']
+  new_l_asappoint uniqueidentifier [note: '관련 기술지원 약속 → new_asappoint']
+  new_l_consulting uniqueidentifier [note: '관련 컨설팅약속 → new_consulting']
+  new_l_dummy uniqueidentifier [note: '더미장비 → equipment']
+  new_l_edu uniqueidentifier [note: '관련 교육 → new_trainingschedule']
+  new_l_region uniqueidentifier [note: '지역 → territory']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, campaign 외 26']
+  resources partylist [note: '리소스 → 참가자 목록(activityparty)']
+  serviceid uniqueidentifier [not null, note: '서비스 → service']
+  siteid uniqueidentifier [note: '사이트 → site']
+  description nvarchar(max) [not null, note: '설명']
+  scheduledend datetime [not null, note: '예약된 종료 시간']
+  scheduledstart datetime [not null, note: '예약된 시작 시간']
+  statecode int [not null, note: '상태 [State]']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '차량/회의실관리 (ServiceAppointment) · 표준·활동 · 총 속성 32개 · 표시 21개\n고객의 요구를 충족시키기 위해 조직에서 제안한 활동입니다. 각 서비스 활동에는 날짜, 시간, 기간 및 필요한 리소스가 포함됩니다.'
+}
+
+// 기술지원 — AS
+TableGroup "기술지원" {
+  new_aslist
+  new_asact
+  new_asappoint
+  new_other_asperson
+  serviceappointment
+}
+
+// ─── 서비스일정 : 서비스 일정 — 리소스·설비 예약 ────────────
+
+Table calendar {
+  calendarid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(160) [note: '이름']
+  Note: '일정 (Calendar) · 표준 · 총 속성 2개 · 표시 2개\n일정 시스템에서 약속 또는 활동이 발생할 시기를 정의하는 데 사용되는 일정입니다.'
+}
+
+Table equipment {
+  equipmentid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(160) [not null, note: '이름']
+  businessunitid uniqueidentifier [not null, note: '사업부 → businessunit']
+  siteid uniqueidentifier [note: '사이트 → site']
+  timezonecode int [not null, note: '표준 시간대']
+  Note: '시설/장비 (Equipment) · 표준 · 총 속성 7개 · 표시 5개\n예약할 수 있는 리소스입니다.'
+}
+
+Table resourcespec {
+  resourcespecid uniqueidentifier [pk, not null, note: '기본 키']
+  businessunitid uniqueidentifier [not null, note: '사업부 → businessunit']
+  Note: '리소스 사양 (ResourceSpec) · 표준 · 총 속성 1개 · 표시 2개\n일정 엔진에서 리소스 풀의 여러 리소스를 선택할 수 있도록 하는 선택 규칙입니다. 이러한 규칙은 서비스와 연관될 수 있습니다.'
+}
+
+Table constraintbasedgroup {
+  constraintbasedgroupid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(160) [not null, note: '이름']
+  businessunitid uniqueidentifier [not null, note: '사업부 → businessunit']
+  Note: '리소스 그룹 (ConstraintBasedGroup) · 표준 · 총 속성 3개 · 표시 3개\n예약할 수 있는 사람, 장비 또는 시설의 그룹이나 모음입니다.'
+}
+
+// 서비스 일정 — 리소스·설비 예약
+TableGroup "서비스일정" {
+  calendar
+  equipment
+  resourcespec
+  constraintbasedgroup
+}
+
+// ─── 교육 : 교육 · 연수 ───────────────────────
+
+Table new_curriculum {
+  new_curriculumid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '커리큘럼 (new_curriculum) · 커스텀 · 총 속성 43개 · 표시 4개'
+}
+
+Table new_trainingschedule {
+  new_trainingscheduleid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '제목']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  new_l_acct uniqueidentifier [note: '관련 거래처 → account']
+  new_l_contract uniqueidentifier [note: '관련 계약 → new_contract']
+  new_l_trainerid uniqueidentifier [note: '강사/발표자 목록 → systemuser']
+  new_l_traininglocation uniqueidentifier [note: '장소 → account']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_p_location int [not null, note: '위치 [Choice]']
+  new_p_machinetype int [not null, note: '업무 종류 [Choice]']
+  new_p_trainingstatus int [not null, note: '진행 상태 [Choice]']
+  new_p_type int [not null, note: '타입 [Choice]']
+  new_txt_homecd nvarchar(100) [not null, note: '정기교육코드']
+  statecode int [not null, note: '상태 [State]']
+  Note: '교육 일정 (new_trainingschedule) · 커스텀 · 총 속성 36개 · 표시 15개'
+}
+
+Table new_edu_participant_list {
+  new_edu_participant_listid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_account uniqueidentifier [note: '신청자 소속 → account']
+  new_l_contact uniqueidentifier [note: '고객명 → contact']
+  new_l_edu uniqueidentifier [not null, note: '관련 교육 → new_trainingschedule']
+  new_l_salesman uniqueidentifier [note: '영업담당 → systemuser']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '교육 참여 리스트 (new_edu_participant_list) · 커스텀 · 총 속성 27개 · 표시 7개'
+}
+
+Table new_event_participant_list {
+  new_event_participant_listid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_account uniqueidentifier [note: 'CRM거래처 → account']
+  new_l_contact uniqueidentifier [note: '고객명 → contact']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '행사(세미나/컨퍼런스) 참여리스트 (new_event_participant_list) · 커스텀 · 총 속성 15개 · 표시 5개'
+}
+
+Table new_traineeperformance {
+  new_traineeperformanceid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '연수생 성과 (new_traineeperformance) · 커스텀 · 총 속성 5개 · 표시 4개'
+}
+
+Table new_traineeperformanceresult {
+  new_traineeperformanceresultid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_contactid uniqueidentifier [note: '연수생 → contact']
+  new_l_performanceid uniqueidentifier [note: 'Trainee Performance ID → new_traineeperformance']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '연수생 성과 보고서 (new_traineeperformanceResult) · 커스텀 · 총 속성 8개 · 표시 6개'
+}
+
+Table new_link {
+  new_linkid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '링크 (new_link) · 커스텀 · 총 속성 2개 · 표시 3개'
+}
+
+// 교육 · 연수
+TableGroup "교육" {
+  new_curriculum
+  new_trainingschedule
+  new_edu_participant_list
+  new_event_participant_list
+  new_traineeperformance
+  new_traineeperformanceresult
+  new_link
+}
+
+// ─── 설문_만족도 : 설문 · 만족도 ──────────────────────
+
+Table new_sulmoon {
+  new_sulmoonid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_aslist uniqueidentifier [note: '기술지원(구) → new_aslist']
+  new_l_aslistact uniqueidentifier [note: '기술지원활동 → new_asact']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '설문 (new_sulmoon) · 커스텀 · 총 속성 22개 · 표시 6개'
+}
+
+Table new_customersatisfaction {
+  new_customersatisfactionid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '만족도조사 (new_customersatisfaction) · 커스텀 · 총 속성 11개 · 표시 4개'
+}
+
+Table new_customersatisfactionresult {
+  new_customersatisfactionresultid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  new_l_contactid uniqueidentifier [note: '연수생 → contact']
+  new_l_surveyid uniqueidentifier [note: 'Survey ID → new_customersatisfaction']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '만족도조사 결과 (new_customersatisfactionResult) · 커스텀 · 총 속성 12개 · 표시 6개'
+}
+
+// 설문 · 만족도
+TableGroup "설문 만족도" {
+  new_sulmoon
+  new_customersatisfaction
+  new_customersatisfactionresult
+}
+
+// ─── 활동 : 활동 — 공통 상위 및 하위 유형 ────────────
+
+Table activitypointer {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '활동 (ActivityPointer) · 표준 · 총 속성 0개 · 표시 1개\n사용자가 수행했거나 수행할 작업입니다. 활동은 일정에 해당 항목을 만들 수 있는 작업입니다.'
+}
+
+Table appointment {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  new_l_prjact uniqueidentifier [note: '프로젝트 모듈 → new_project_act']
+  optionalattendees partylist [note: '보고자명단 → 참가자 목록(activityparty)']
+  ownerid uniqueidentifier [not null, note: '업무수행자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, bulkoperation 외 28']
+  requiredattendees partylist [note: '동행자 → 참가자 목록(activityparty)']
+  new_p_type int [not null, note: '약속형태 [Choice]']
+  scheduledend datetime [not null, note: '종료 시간']
+  scheduledstart datetime [not null, note: '약속날짜']
+  statecode int [not null, note: '상태 [State]']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '약속 (Appointment) · 표준·활동 · 총 속성 25개 · 표시 13개\n시작/종료 시간 및 기간으로 시간 간격을 표시하는 약정입니다.'
+}
+
+Table task {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  new_l_prjact uniqueidentifier [note: '프로젝트 모듈 → new_project_act']
+  ownerid uniqueidentifier [not null, note: '업무수행자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, campaign 외 27']
+  new_p_jobtype int [not null, note: '업무타입 [Choice]']
+  scheduledstart datetime [not null, note: '시작 날짜']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '작업 (Task) · 표준·활동 · 총 속성 22개 · 표시 9개\n수행해야 할 작업을 나타내는 일반 활동입니다.'
+}
+
+Table phonecall {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  from partylist [not null, note: '발신 위치 → 참가자 목록(activityparty)']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, bookableresourcebooking, bookableresourcebookingheader, bulkoperation 외 28']
+  to partylist [not null, note: '발신 대상 → 참가자 목록(activityparty)']
+  scheduledstart datetime [not null, note: '시작 날짜']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '전화 통화 (PhoneCall) · 표준·활동 · 총 속성 15개 · 표시 8개\n전화 통화를 추적하는 활동입니다.'
+}
+
+Table email {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [note: '주제']
+  bcc partylist [note: '숨은 참조 → 참가자 목록(activityparty)']
+  cc partylist [note: '참조 → 참가자 목록(activityparty)']
+  from partylist [note: '보낸 사람 → 참가자 목록(activityparty)']
+  new_l_contract uniqueidentifier [note: '관련 계약 → new_contract']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '관련 항목 → 다형: account, asyncoperation, bookableresourcebooking, bookableresourcebookingheader 외 29']
+  to partylist [note: '받는 사람 → 참가자 목록(activityparty)']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '전자 메일 (Email) · 표준·활동 · 총 속성 16개 · 표시 10개\n전자 메일 프로토콜을 사용하여 배달된 활동입니다.'
+}
+
+Table bulkoperation {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  regardingobjectid uniqueidentifier [note: '가져올 파일 이름 → 다형: campaignactivity, list']
+  statecode int [not null, note: '상태 [State]']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '퀵 캠페인 (BulkOperation) · 표준·활동 · 총 속성 16개 · 표시 6개\n캠페인 활동이나 퀵 캠페인을 배포하는 것처럼 큰 데이터 집합에 대한 비동기 작업과 시간이 오래 걸리는 작업을 수행하는 데 사용되는 시스템 작업입니다.'
+}
+
+Table new_leave {
+  activityid uniqueidentifier [pk, not null, note: '기본 키']
+  subject nvarchar(200) [not null, note: '주제']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  scheduledend datetime [not null, note: '종료 날짜']
+  scheduledstart datetime [not null, note: '시작 날짜']
+  statecode int [not null, note: '활동 상태 [State]']
+  Note: '휴가 (new_leave) · 커스텀·활동 · 총 속성 7개 · 표시 6개'
+}
+
+// 활동 — 공통 상위 및 하위 유형
+TableGroup "활동" {
+  activitypointer
+  appointment
+  task
+  phonecall
+  email
+  bulkoperation
+  new_leave
+}
+
+// ─── 사내 : 사내 운영 ─────────────────────────
+
+Table new_companyboard {
+  new_companyboardid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '제목']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_p_category int [not null, note: 'BU [Choice]']
+  Note: '사내게시판 (new_companyboard) · 커스텀 · 총 속성 12개 · 표시 4개'
+}
+
+Table new_comment {
+  new_commentid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: '댓글 (new_comment) · 커스텀 · 총 속성 2개 · 표시 3개'
+}
+
+Table new_attachfile {
+  new_attachfileid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  statuscode int [note: '상태 설명 [Status]']
+  Note: '첨부파일 관리 (new_attachfile) · 커스텀 · 총 속성 13개 · 표시 5개'
+}
+
+Table new_weeklyreport {
+  new_weeklyreportid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '주간보고서명']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '주간업무보고 (new_weeklyreport) · 커스텀 · 총 속성 7개 · 표시 4개'
+}
+
+Table new_knowledgebase {
+  new_knowledgebaseid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '제목']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  new_txt_contents nvarchar(max) [not null, note: '내용']
+  Note: '지식기반 (new_knowledgebase) · 커스텀 · 총 속성 12개 · 표시 4개'
+}
+
+// 사내 운영
+TableGroup "사내" {
+  new_companyboard
+  new_comment
+  new_attachfile
+  new_weeklyreport
+  new_knowledgebase
+}
+
+// ─── 공통_코드 : 공통 · 코드 ───────────────────────
+
+Table new_zipcode {
+  new_zipcodeid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '우편']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '우편번호 (new_zipcode) · 커스텀 · 총 속성 14개 · 표시 5개'
+}
+
+Table new_postno5 {
+  new_postno5id uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(10) [not null, note: '우편번호']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '새우편번호 (new_postno5) · 커스텀 · 총 속성 3개 · 표시 4개\n5자리 우편번호'
+}
+
+Table new_menu {
+  new_menuid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  Note: 'Menu설정 (new_menu) · 커스텀 · 총 속성 2개 · 표시 3개'
+}
+
+Table new_crm_user {
+  new_crm_userid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '사용자명']
+  new_l_crm uniqueidentifier [note: 'CRM 사용자 → systemuser']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: 'ERP_사용자 (new_crm_User) · 커스텀 · 총 속성 6개 · 표시 5개'
+}
+
+Table new_dev_role {
+  new_dev_roleid uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '개발보안설정 (new_dev_role) · 커스텀 · 총 속성 3개 · 표시 4개'
+}
+
+Table new_dev_role2 {
+  new_dev_role2id uniqueidentifier [pk, not null, note: '기본 키']
+  new_name nvarchar(100) [not null, note: '이름']
+  ownerid uniqueidentifier [not null, note: '담당자 → 다형: systemuser, team']
+  statecode int [not null, note: '상태 [State]']
+  Note: '개발보안[경영] (new_dev_role2) · 커스텀 · 총 속성 3개 · 표시 4개'
+}
+
+Table subject {
+  subjectid uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '주제 (Subject) · 표준 · 총 속성 0개 · 표시 1개\n시스템에서 사용할 수 있는 주제에 대한 정보입니다.'
+}
+
+// 공통 · 코드
+TableGroup "공통 코드" {
+  new_zipcode
+  new_postno5
+  new_menu
+  new_crm_user
+  new_dev_role
+  new_dev_role2
+  subject
+}
+
+// ─── 시스템 : 시스템 — 보안·조직 ───────────────────
+
+Table systemuser {
+  systemuserid uniqueidentifier [pk, not null, note: '기본 키']
+  businessunitid uniqueidentifier [not null, note: '사업부 → businessunit']
+  defaultmailbox uniqueidentifier [note: '사서함 → mailbox']
+  mobileofflineprofileid uniqueidentifier [note: 'Mobile Offline 프로필 → mobileofflineprofile']
+  new_l_junmu uniqueidentifier [note: '기술대표 → systemuser']
+  new_l_localgroup uniqueidentifier [note: '지역그룹장 → systemuser']
+  new_l_partuser uniqueidentifier [note: '부본부장 → systemuser']
+  new_l_sangmu uniqueidentifier [note: '영업대표 → systemuser']
+  new_l_techjang uniqueidentifier [note: '기술그룹장 → systemuser']
+  new_l_temajang uniqueidentifier [note: '팀장 → systemuser']
+  parentsystemuserid uniqueidentifier [note: 'xxx-관리자 → systemuser']
+  positionid uniqueidentifier [note: '위치 → position']
+  queueid uniqueidentifier [note: '기본 큐 → queue']
+  siteid uniqueidentifier [note: '지점/사무소 → site']
+  territoryid uniqueidentifier [note: '지역 → territory']
+  accessmode int [not null, note: '액세스 모드 [Choice]']
+  caltype int [not null, note: '라이선스 유형 [Choice]']
+  domainname nvarchar(1024) [not null, note: '사용자 이름']
+  firstname nvarchar(64) [not null, note: '이름']
+  internalemailaddress nvarchar(100) [not null, note: '기본 메일 주소']
+  invitestatuscode int [not null, note: '초대 상태 [Choice]']
+  Note: '사용자 (SystemUser) · 표준 · 총 속성 56개 · 표시 21개\nMicrosoft CRM 시스템에 액세스할 수 있고 Microsoft CRM 데이터베이스의 개체를 담당하는 사람입니다.'
+}
+
+Table businessunit {
+  businessunitid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(160) [not null, note: '이름']
+  parentbusinessunitid uniqueidentifier [not null, note: '상위 사업 → businessunit']
+  Note: '사업부 (BusinessUnit) · 표준 · 총 속성 17개 · 표시 3개\nMicrosoft Dynamics 365 데이터베이스에 있는 사업부, 부문 또는 부서입니다.'
+}
+
+Table role {
+  roleid uniqueidentifier [pk, not null, note: '기본 키']
+  name nvarchar(100) [not null, note: '이름']
+  createdby uniqueidentifier [note: '만든 사람 → systemuser']
+  modifiedby uniqueidentifier [note: '수정한 사람 → systemuser']
+  parentroleid uniqueidentifier [note: '상위 역할 → role']
+  Note: '보안 역할 (Role) · 표준 · 총 속성 6개 · 표시 5개\n보안 권한을 그룹화한 것입니다. 사용자는 Microsoft CRM 시스템에 대한 액세스 권한을 부여하는 역할을 할당받습니다.'
+}
+
+Table owner {
+  ownerid uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '담당자 (Owner) · 표준 · 총 속성 0개 · 표시 1개\n삭제되지 않은 시스템 사용자 및 삭제되지 않은 팀의 그룹입니다. 담당자를 사용하여 특정 개체에 대한 액세스를 제어할 수 있습니다.'
+}
+
+Table resource {
+  resourceid uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '리소스 (Resource) · 표준 · 총 속성 0개 · 표시 1개\n서비스를 위해 예약할 수 있는 사용자 또는 시설/장비입니다.'
+}
+
+// 시스템 — 보안·조직
+TableGroup "시스템" {
+  systemuser
+  businessunit
+  role
+  owner
+  resource
+}
+
+// ─── 문서 밖 참조 대상 ──────────────────────────────
+//  엔티티 시트(75개)에는 없지만 Lookup Targets 가 지목한 대상이다.
+//  관계는 사실이므로 버리지 않고 스텁으로 남긴다. 컬럼은 알 수 없다.
+
+Table campaign {
+  campaignid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table mailbox {
+  mailboxid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table mobileofflineprofile {
+  mobileofflineprofileid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table new_account {
+  new_accountid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table position {
+  positionid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table pricelevel {
+  pricelevelid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table queue {
+  queueid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table service {
+  serviceid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table site {
+  siteid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 3건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table territory {
+  territoryid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 2건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+Table transactioncurrency {
+  transactioncurrencyid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 5건\n엔티티 시트에 포함되지 않아 속성을 알 수 없다.'
+}
+
+// 엔티티 시트에 없으나 Lookup 이 지목한 대상. 스텁이다.
+TableGroup "문서 밖" {
+  campaign
+  mailbox
+  mobileofflineprofile
+  new_account
+  position
+  pricelevel
+  queue
+  service
+  site
+  territory
+  transactioncurrency
+}
+
+// ═══════ 관계 — Lookup Targets 가 단일 엔티티인 것만 ═══════
+
+Ref: account.new_9l_enguser09 > systemuser.systemuserid
+Ref: account.new_l_contract_contact > contact.contactid
+Ref: account.new_l_engineer > systemuser.systemuserid
+Ref: account.new_l_enguser02 > systemuser.systemuserid
+Ref: account.new_l_enguser03 > systemuser.systemuserid
+Ref: account.new_l_enguser04 > systemuser.systemuserid
+Ref: account.new_l_enguser05 > systemuser.systemuserid
+Ref: account.new_l_enguser06 > systemuser.systemuserid
+Ref: account.new_l_enguser07 > systemuser.systemuserid
+Ref: account.new_l_enguser08 > systemuser.systemuserid
+Ref: account.new_l_enguser10 > systemuser.systemuserid
+Ref: account.new_l_keyuser > contact.contactid
+Ref: account.new_l_owner02 > systemuser.systemuserid
+Ref: account.new_l_sbs1 > businessunit.businessunitid
+Ref: account.new_l_sbs2 > businessunit.businessunitid
+Ref: account.new_l_tbs1 > businessunit.businessunitid
+Ref: account.new_l_tbs2 > businessunit.businessunitid
+Ref: account.new_l_tbs3 > businessunit.businessunitid
+Ref: account.new_l_tbs4 > businessunit.businessunitid
+Ref: account.new_l_tbs5 > businessunit.businessunitid
+Ref: account.new_taxmanager > contact.contactid
+Ref: account.originatingleadid > lead.leadid
+Ref: account.parentaccountid > account.accountid
+Ref: account.primarycontactid > contact.contactid
+Ref: contact.modifiedby > systemuser.systemuserid
+Ref: contact.originatingleadid > lead.leadid
+Ref: lead.createdby > systemuser.systemuserid
+Ref: opportunity.createdby > systemuser.systemuserid
+Ref: opportunity.modifiedby > systemuser.systemuserid
+Ref: opportunity.new_l_contact > contact.contactid
+Ref: opportunity.parentaccountid > account.accountid
+Ref: opportunity.parentcontactid > contact.contactid
+Ref: new_opptyproduct.new_l_oppty > opportunity.opportunityid
+Ref: new_opptyproduct.new_product > new_product.new_productid
+Ref: new_machine.new_l_acct > account.accountid
+Ref: new_eachaccount.new_l_acct > account.accountid
+Ref: new_quot.new_l_account > account.accountid
+Ref: new_quot.new_l_contact > contact.contactid
+Ref: new_quot.new_l_copy_source > new_quot.new_quotid
+Ref: new_quot.new_l_oppty > opportunity.opportunityid
+Ref: new_quot_details.new_l_quot > new_quot.new_quotid
+Ref: new_quot_details.new_l_quot_main_g > new_quot_main_g.new_quot_main_gid
+Ref: new_quot_details.new_l_quot_main_g2 > new_quot_main_g.new_quot_main_gid
+Ref: new_quot_pdf.new_l_quotation > new_quot.new_quotid
+Ref: new_quot_main_g.new_l_largegroup > new_quot_main_g.new_quot_main_gid
+Ref: new_quot_main_g.new_l_quot > new_quot.new_quotid
+Ref: new_contract.createdby > systemuser.systemuserid
+Ref: new_contract.modifiedby > systemuser.systemuserid
+Ref: new_contract.new_l_acct > account.accountid
+Ref: new_contract.new_l_basiccontract > new_contract.new_contractid
+Ref: new_contract.new_l_calculate_contact > contact.contactid
+Ref: new_contract.new_l_contract > account.accountid
+Ref: new_contract.new_l_contractuser > contact.contactid
+Ref: new_contract.new_l_engineer > systemuser.systemuserid
+Ref: new_contract.new_l_exchange > new_exchange.new_exchangeid
+Ref: new_contract.new_l_machine > new_machine.new_machineid
+Ref: new_contract.new_l_username > contact.contactid
+Ref: new_contract_product.createdby > systemuser.systemuserid
+Ref: new_contract_product.modifiedby > systemuser.systemuserid
+Ref: new_contract_product.new_l_acct > account.accountid
+Ref: new_contract_product.new_l_contract > new_contract.new_contractid
+Ref: new_contract_product.new_l_product > new_product.new_productid
+Ref: new_taxinvoice.createdby > systemuser.systemuserid
+Ref: new_taxinvoice.modifiedby > systemuser.systemuserid
+Ref: new_taxinvoice.new_addressee > contact.contactid
+Ref: new_taxinvoice.new_l_acct > account.accountid
+Ref: new_taxinvoice.new_l_contract > new_contract.new_contractid
+Ref: new_taxinvoicehistory.new_l_income > new_income.new_incomeid
+Ref: new_income.createdby > systemuser.systemuserid
+Ref: new_income.modifiedby > systemuser.systemuserid
+Ref: new_income.new_l_acct > account.accountid
+Ref: new_income.new_l_addressee > contact.contactid
+Ref: new_income.new_l_taxinvoice > new_taxinvoice.new_taxinvoiceid
+Ref: new_po.new_l_acct > account.accountid
+Ref: new_po.new_l_contract > new_contract.new_contractid
+Ref: new_po.new_l_contract_product > new_contract_product.new_contract_productid
+Ref: new_po.new_l_product > new_product.new_productid
+Ref: new_licensekey.modifiedby > systemuser.systemuserid
+Ref: new_licensekey.new_l_acct > account.accountid
+Ref: new_licensekey.new_l_addressee > systemuser.systemuserid
+Ref: new_licensekey.new_l_approvaluser > systemuser.systemuserid
+Ref: new_licensekey.new_l_contact > contact.contactid
+Ref: new_licensekey.new_l_contract > new_contract.new_contractid
+Ref: new_licensekey.new_l_exchange > new_exchange.new_exchangeid
+Ref: new_licensekey.new_l_machine > new_machine.new_machineid
+Ref: new_licensekey.new_l_machine2 > new_machine.new_machineid
+Ref: new_licensekey.new_l_machine3 > new_machine.new_machineid
+Ref: new_licensekey.new_l_oppty > opportunity.opportunityid
+Ref: new_licensekeyproduct.new_l_account > account.accountid
+Ref: new_licensekeyproduct.new_l_exchange > new_exchange.new_exchangeid
+Ref: new_licensekeyproduct.new_l_license > new_licensekey.new_licensekeyid
+Ref: new_licensekeyproduct.new_l_product > new_product.new_productid
+Ref: new_project.new_contract > new_contract.new_contractid
+Ref: new_project.new_l_acct > account.accountid
+Ref: new_project.new_l_oppty > opportunity.opportunityid
+Ref: new_project.new_l_relconsulting > new_project.new_projectid
+Ref: new_project.new_l_salesman > systemuser.systemuserid
+Ref: new_project_act.new_l_eng02 > systemuser.systemuserid
+Ref: new_project_act.new_l_eng03 > systemuser.systemuserid
+Ref: new_project_act.new_l_eng04 > systemuser.systemuserid
+Ref: new_project_act.new_l_project > new_project.new_projectid
+Ref: new_project_activity.createdby > systemuser.systemuserid
+Ref: new_project_activity.new_l_project > new_project.new_projectid
+Ref: new_project_activity.new_l_project_act > new_project_act.new_project_actid
+Ref: new_project_activity.new_l_project_activity > new_project_activity.new_project_activityid
+Ref: new_projectbiz.new_l_businessunit > businessunit.businessunitid
+Ref: new_projectbiz.new_l_project > new_project.new_projectid
+Ref: new_pj_person.new_l_biz > businessunit.businessunitid
+Ref: new_pj_person.new_l_project > new_project.new_projectid
+Ref: new_pj_person.new_l_projectbiz > new_projectbiz.activityid
+Ref: new_pj_person.new_l_user > systemuser.systemuserid
+Ref: new_prj_contact.new_l_acct > account.accountid
+Ref: new_prj_contact.new_l_contact > contact.contactid
+Ref: new_prj_contact.new_l_project > new_project.new_projectid
+Ref: new_consulting.new_l_acct > account.accountid
+Ref: new_consulting.new_l_contact > contact.contactid
+Ref: new_consulting.new_l_oppty > opportunity.opportunityid
+Ref: new_consulting.new_l_project > new_project.new_projectid
+Ref: new_consulting.new_l_project_act > new_project_act.new_project_actid
+Ref: new_consulting_work.new_l_consulting_work > new_consulting_work.activityid
+Ref: new_consulting_work.new_l_project > new_project.new_projectid
+Ref: new_consulting_work.new_l_project_act > new_project_act.new_project_actid
+Ref: new_consultingoutsourcing.new_l_acct > account.accountid
+Ref: new_consultingoutsourcing.new_l_relconsulting > new_project.new_projectid
+Ref: new_aslist.new_l_acct > account.accountid
+Ref: new_aslist.new_l_business > businessunit.businessunitid
+Ref: new_aslist.new_l_contact > contact.contactid
+Ref: new_asact.createdby > systemuser.systemuserid
+Ref: new_asact.modifiedby > systemuser.systemuserid
+Ref: new_asact.new_l_acct > account.accountid
+Ref: new_asact.new_l_business > businessunit.businessunitid
+Ref: new_asact.new_l_contact > contact.contactid
+Ref: new_asappoint.new_l_acct > account.accountid
+Ref: new_asappoint.new_l_contact > contact.contactid
+Ref: new_asappoint.new_l_oppty > opportunity.opportunityid
+Ref: new_other_asperson.new_l_licenseacct > account.accountid
+Ref: new_other_asperson.new_l_ocontact > contact.contactid
+Ref: serviceappointment.createdby > systemuser.systemuserid
+Ref: serviceappointment.modifiedby > systemuser.systemuserid
+Ref: serviceappointment.new_l_appoint > appointment.activityid
+Ref: serviceappointment.new_l_asappoint > new_asappoint.activityid
+Ref: serviceappointment.new_l_consulting > new_consulting.activityid
+Ref: serviceappointment.new_l_dummy > equipment.equipmentid
+Ref: serviceappointment.new_l_edu > new_trainingschedule.new_trainingscheduleid
+Ref: equipment.businessunitid > businessunit.businessunitid
+Ref: resourcespec.businessunitid > businessunit.businessunitid
+Ref: constraintbasedgroup.businessunitid > businessunit.businessunitid
+Ref: new_trainingschedule.createdby > systemuser.systemuserid
+Ref: new_trainingschedule.modifiedby > systemuser.systemuserid
+Ref: new_trainingschedule.new_l_acct > account.accountid
+Ref: new_trainingschedule.new_l_contract > new_contract.new_contractid
+Ref: new_trainingschedule.new_l_trainerid > systemuser.systemuserid
+Ref: new_trainingschedule.new_l_traininglocation > account.accountid
+Ref: new_edu_participant_list.new_l_account > account.accountid
+Ref: new_edu_participant_list.new_l_contact > contact.contactid
+Ref: new_edu_participant_list.new_l_edu > new_trainingschedule.new_trainingscheduleid
+Ref: new_edu_participant_list.new_l_salesman > systemuser.systemuserid
+Ref: new_event_participant_list.new_l_account > account.accountid
+Ref: new_event_participant_list.new_l_contact > contact.contactid
+Ref: new_traineeperformanceresult.new_l_contactid > contact.contactid
+Ref: new_traineeperformanceresult.new_l_performanceid > new_traineeperformance.new_traineeperformanceid
+Ref: new_sulmoon.new_l_aslist > new_aslist.new_aslistid
+Ref: new_sulmoon.new_l_aslistact > new_asact.activityid
+Ref: new_customersatisfactionresult.new_l_contactid > contact.contactid
+Ref: new_customersatisfactionresult.new_l_surveyid > new_customersatisfaction.new_customersatisfactionid
+Ref: appointment.createdby > systemuser.systemuserid
+Ref: appointment.new_l_prjact > new_project_act.new_project_actid
+Ref: task.createdby > systemuser.systemuserid
+Ref: task.new_l_prjact > new_project_act.new_project_actid
+Ref: email.new_l_contract > new_contract.new_contractid
+Ref: new_zipcode.modifiedby > systemuser.systemuserid
+Ref: new_crm_user.new_l_crm > systemuser.systemuserid
+Ref: systemuser.businessunitid > businessunit.businessunitid
+Ref: systemuser.new_l_junmu > systemuser.systemuserid
+Ref: systemuser.new_l_localgroup > systemuser.systemuserid
+Ref: systemuser.new_l_partuser > systemuser.systemuserid
+Ref: systemuser.new_l_sangmu > systemuser.systemuserid
+Ref: systemuser.new_l_techjang > systemuser.systemuserid
+Ref: systemuser.new_l_temajang > systemuser.systemuserid
+Ref: systemuser.parentsystemuserid > systemuser.systemuserid
+Ref: businessunit.parentbusinessunitid > businessunit.businessunitid
+Ref: role.createdby > systemuser.systemuserid
+Ref: role.modifiedby > systemuser.systemuserid
+Ref: role.parentroleid > role.roleid
+Ref: lead.campaignid > campaign.campaignid
+Ref: systemuser.defaultmailbox > mailbox.mailboxid
+Ref: systemuser.mobileofflineprofileid > mobileofflineprofile.mobileofflineprofileid
+Ref: new_eachaccount.new_l_account > new_account.new_accountid
+Ref: systemuser.positionid > position.positionid
+Ref: opportunity.pricelevelid > pricelevel.pricelevelid
+Ref: systemuser.queueid > queue.queueid
+Ref: serviceappointment.serviceid > service.serviceid
+Ref: equipment.siteid > site.siteid
+Ref: serviceappointment.siteid > site.siteid
+Ref: systemuser.siteid > site.siteid
+Ref: serviceappointment.new_l_region > territory.territoryid
+Ref: systemuser.territoryid > territory.territoryid
+Ref: account.transactioncurrencyid > transactioncurrency.transactioncurrencyid
+Ref: contact.transactioncurrencyid > transactioncurrency.transactioncurrencyid
+Ref: lead.transactioncurrencyid > transactioncurrency.transactioncurrencyid
+Ref: list.transactioncurrencyid > transactioncurrency.transactioncurrencyid
+Ref: opportunity.transactioncurrencyid > transactioncurrency.transactioncurrencyid
+
+// ═══════ 다형 참조 — Ref 로 그리지 않았다 ═══════
+//  대상이 둘 이상이라 DBML 의 단일 Ref 로 표현할 수 없다.
+//  하나를 임의로 고르면 없는 사실을 만드는 것이라 선을 긋지 않았다.
+//  각 컬럼의 note 에 대상이 모두 적혀 있다.
+//
+//  Owner     systemuser, team                                62건
+//  Lookup    대상 다수(활동 regardingobjectid 계열)                   8건
+//  Customer  account, contact                                 3건
+//  Lookup    campaignactivity, list                           1건
+//
+//  PartyList 19건 — 활동 참가자. activityparty 를 거치는 다대다이며
+//  activityparty 는 이 문서에 없다. 그려면 없는 테이블을 만드는 것이라 남기지 않았다.

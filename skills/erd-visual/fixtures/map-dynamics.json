@@ -1,0 +1,32 @@
+{
+  "_설명": [
+    "Dynamics 365 자료 매핑. 파일 확장자별로 갈라 쓴다.",
+    "xlsx: 관계 근거는 Metadata 시트 L열(Additional data)의 'Targets:' 값.",
+    "      대상이 하나면 사실(Ref), 여럿이면 다형 참조라 선을 긋지 않는다.",
+    "xml : SiteMap 은 테이블이 아니라 '어느 엔티티가 어느 업무 영역인가'를 준다.",
+    "      그룹이 배선 품질과 속도를 좌우하므로 이 힌트가 중요하다."
+  ],
+
+  "entities": {
+    "sheet": "Entities list",
+    "name": "E",
+    "label": "A"
+  },
+  "attributes": {
+    "sheet": "Metadata",
+    "table": "B",
+    "name": "C",
+    "type": "F",
+    "label": "E",
+    "required": "J",
+    "extra": "L",
+    "refPattern": "Targets:\\s*(.*)"
+  },
+
+  "groups": {
+    "container": "Area",
+    "containerName": "Id",
+    "member": "SubArea",
+    "memberEntity": "Entity"
+  }
+}

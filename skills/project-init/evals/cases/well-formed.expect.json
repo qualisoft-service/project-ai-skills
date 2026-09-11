@@ -1,0 +1,18 @@
+{
+  "case": "well-formed",
+  "note": "정보가 충분한 입력. 있는 것을 정확히 옮기고 없는 것만 미결로 남기는지를 본다.",
+  "preset": "mobile-app",
+  "minBlockers": 1,
+  "minTodos": 1,
+  "noLeftoverPlaceholders": true,
+  "noOutcomeClaims": true,
+  "requireOptionsRecorded": true,
+  "expectOptionsOff": ["i18n"],
+  "mustMentionUndecided": ["일정"],
+  "humanCheck": [
+    "범위 제외(소셜·결제·다국어)를 PRD의 Won't 로 옮겼는가",
+    "위치 권한과 개인정보 동의를 별도 항목으로 세웠는가",
+    "'주 3회 이상 기록' 목표를 측정 방법과 함께 G- 로 등록했는가",
+    "로고·도메인 부재를 Blocker 로 올렸는가"
+  ]
+}

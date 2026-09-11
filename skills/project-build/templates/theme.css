@@ -1,0 +1,45 @@
+/* src/styles/theme.css
+ *
+ * 토큰 정본은 Docs/_design/tokens.css 하나다. **값을 여기에 적지 않는다.**
+ * 여기서는 그 이름을 Tailwind 이름에 잇기만 한다.
+ *
+ * 값을 옮겨 적는 순간 두 곳이 되고, 두 곳은 반드시 갈라진다 —
+ * 3단계에서 실제로 그렇게 갈라진 적이 있다(DS-007).
+ * build.mjs check 가 복사를 감지해 경고한다.
+ */
+@import "tailwindcss";
+@import "../../Docs/_design/tokens.css";
+
+@theme inline {
+  /* 색 */
+  --color-bg:            var(--bg);
+  --color-bg-subtle:     var(--bg-subtle);
+  --color-surface:       var(--surface);
+  --color-ink:           var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted:     var(--ink-muted);
+  --color-brand:         var(--brand);
+  --color-line:          var(--line);
+  --color-line-strong:   var(--line-strong);
+  --color-line-soft:     var(--line-soft);
+
+  /* 서체 */
+  --font-display: var(--font-display);
+  --font-body:    var(--font-body);
+
+  /* 크기 — clamp() 를 그대로 넘긴다.
+     고정 px 로 바꾸면 반응형이 죽고, 그게 대조기가 가장 자주 잡는 실수다. */
+  --text-display: var(--text-display);
+  --text-h2:      var(--text-h2);
+  --text-h3:      var(--text-h3);
+  --text-lead:    var(--text-lead);
+
+  /* 형태 */
+  --radius-panel: var(--radius-panel);
+  --radius-card:  var(--radius-card);
+  --radius-sm:    var(--radius-sm);
+
+  /* 간격 */
+  --spacing-section: var(--section-y);
+  --container-site:  var(--container);
+}

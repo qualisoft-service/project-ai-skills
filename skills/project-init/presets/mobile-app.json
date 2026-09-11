@@ -1,0 +1,20 @@
+{
+  "name": "mobile-app",
+  "label": "모바일 앱",
+  "description": "iOS/Android 앱. 스토어 심사·권한·오프라인·푸시가 웹과 다른 축이다.",
+  "modules": [
+    "core",
+    "audience",
+    "product",
+    "ux",
+    "design",
+    "a11y",
+    "backend",
+    "mobile",
+    "engineering",
+    "ops"
+  ],
+  "exclude": [
+    "security-audit"
+  ]
+}

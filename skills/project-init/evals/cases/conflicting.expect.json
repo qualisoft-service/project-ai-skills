@@ -1,0 +1,17 @@
+{
+  "case": "conflicting",
+  "note": "모순이 3개 있다. 그대로 받아적지 않고 짚어내는지를 본다. 사내 시스템에 SEO는 성립하지 않는다.",
+  "preset": "internal-system",
+  "minBlockers": 1,
+  "minTodos": 2,
+  "noLeftoverPlaceholders": true,
+  "noOutcomeClaims": true,
+  "requireOptionsRecorded": true,
+  "expectOptionsOff": ["seo", "naver"],
+  "humanCheck": [
+    "사내 시스템인데 SEO를 요구한 모순을 짚었는가",
+    "미니멀 vs 정보 밀집 충돌을 짚었는가",
+    "모바일 완벽 대응 vs 데스크톱 전용 충돌을 짚었는가",
+    "2주 일정이 범위와 맞는지 되물었는가"
+  ]
+}

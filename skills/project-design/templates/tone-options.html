@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>톤 방향 — 고르는 화면</title>
+<!--
+  톤 관문. Docs/_design/tone-options.html
+
+  ── 왜 이게 있는가 ──
+  완성 시안을 만든 뒤에 "배경이 좀…" 소리를 들으면 전부 다시 만들어야 한다.
+  실제로 Hero 배경 하나 때문에 다섯 판을 갈아엎은 적이 있다.
+  흰색으로 갔다가 → 회색으로 되돌렸다가 → 검정으로 갔다. 헛걸음이 두 번이다.
+
+  그래서 **시안보다 먼저** 이 화면을 만든다.
+  레이아웃·카피·구조는 전부 같고 **톤만 다르다.** 고를 것이 색 하나뿐이라
+  사용자가 5초 만에 답할 수 있다.
+
+  ── 쓰는 법 ──
+  1. 아래 .opt 블록의 변수만 바꿔 2~4개를 만든다. 마크업은 건드리지 않는다.
+  2. 사용자에게 보여주고 하나를 고르게 한다.
+  3. 고른 값을 tokens.css 로 옮기고 change-log 에 DS 항목으로 남긴다.
+  4. 그 다음에 시안을 만든다.
+
+  고르지 못하겠다고 하면 그것도 정보다. "무엇이 걸리는지"를 물어 후보를 좁힌다.
+-->
+<style>
+:root{
+  --ui-bg:#f7f7f5; --ui-ink:#111; --ui-muted:#6b6b68; --ui-line:#dededb;
+  --font: -apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Segoe UI","Apple SD Gothic Neo",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--ui-bg);color:var(--ui-ink);font:15px/1.6 var(--font);word-break:keep-all}
+.wrap{max-width:1240px;margin:0 auto;padding:36px 24px 100px}
+h1{margin:0 0 6px;font-size:26px;letter-spacing:-.02em}
+.sub{margin:0 0 8px;color:var(--ui-muted);font-size:14px}
+.ask{margin:0 0 30px;padding:14px 16px;border-left:3px solid var(--ui-ink);background:#fff;
+  border-radius:0 10px 10px 0;font-size:14px;line-height:1.7}
+.ask b{font-weight:650}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+
+/* 후보 카드 — 이 안의 변수만 바꾼다 */
+.opt{border:1px solid var(--ui-line);border-radius:16px;background:#fff;overflow:hidden}
+.opt-head{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--ui-line)}
+.opt-head b{font-size:14px;letter-spacing:-.01em}
+.opt-head .tag{margin-left:auto;padding:2px 9px;border-radius:999px;background:var(--ui-bg);
+  font-size:11px;color:var(--ui-muted)}
+.chips{display:flex;gap:5px;padding:11px 16px;border-bottom:1px solid var(--ui-line);flex-wrap:wrap}
+.chips i{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--ui-muted);font-style:normal}
+.chips i::before{content:"";width:13px;height:13px;border-radius:4px;border:1px solid rgba(0,0,0,.12)}
+
+/* 미리보기 — 모든 후보가 똑같은 구조를 쓴다. 다른 건 색뿐이다. */
+.pv{padding:26px 22px 22px;background:var(--t-bg);color:var(--t-ink);min-height:270px}
+.pv .eb{display:inline-block;margin:0 0 14px;padding:5px 11px;border:1px solid var(--t-line);
+  border-radius:999px;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--t-muted)}
+.pv h2{margin:0 0 10px;font-size:26px;line-height:1.15;letter-spacing:-.03em;font-weight:640}
+.pv p{margin:0 0 18px;font-size:13px;line-height:1.6;color:var(--t-muted)}
+.pv .cta{display:inline-flex;align-items:center;height:34px;padding:0 16px;border-radius:999px;
+  background:var(--t-cta);color:var(--t-cta-ink);font-size:12.5px;font-weight:600}
+.pv .card{margin-top:20px;padding:13px 14px;border:1px solid var(--t-line);border-radius:12px;background:var(--t-surface)}
+.pv .card b{display:block;font-size:12px;margin-bottom:7px}
+.pv .bar{height:5px;border-radius:3px;background:var(--t-line);margin-bottom:5px}
+
+/* ── 후보 1 ── */
+.opt-1 .pv{--t-bg:#ffffff;--t-ink:#111111;--t-muted:#5a5a58;--t-line:#e2e2df;
+  --t-surface:#f7f7f5;--t-cta:#111111;--t-cta-ink:#ffffff}
+/* ── 후보 2 ── */
+.opt-2 .pv{--t-bg:#f4f4f1;--t-ink:#161615;--t-muted:#5c5c58;--t-line:#dcdcd7;
+  --t-surface:#ffffff;--t-cta:#161615;--t-cta-ink:#ffffff}
+/* ── 후보 3 ── */
+.opt-3 .pv{--t-bg:#111111;--t-ink:#ffffff;--t-muted:#adadaa;--t-line:#2e2e2c;
+  --t-surface:#1b1b1a;--t-cta:#ffffff;--t-cta-ink:#111111}
+
+.note{margin:30px 0 0;padding:16px 18px;border-left:3px solid var(--ui-line);background:#fff;
+  border-radius:0 10px 10px 0;font-size:13px;color:var(--ui-muted);line-height:1.75}
+.note b{color:var(--ui-ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>톤 방향</h1>
+  <p class="sub">구조·카피·여백은 전부 같습니다. <b>색과 명도만</b> 다릅니다.</p>
+  <p class="ask">
+    <b>고를 것 하나:</b> 첫 화면이 어느 쪽에 가까웠으면 하나요?<br>
+    고르기 어려우면 "무엇이 걸리는지"만 말해 주세요 — 그게 더 빠릅니다.
+    <b>여기서 정하면 시안을 다시 만들 일이 없습니다.</b>
+  </p>
+
+  <div class="grid">
+
+    <div class="opt opt-1">
+      <div class="opt-head"><b>A. 밝게, 흰 바탕</b><span class="tag">가장 중립적</span></div>
+      <div class="chips"><i style="--c:#ffffff">배경 #FFFFFF</i><i>본문 #111111</i><i>면 #F7F7F5</i></div>
+      <div class="pv">
+        <span class="eb">Eyebrow</span>
+        <h2>여기에 실제<br>제목 카피가 들어갑니다.</h2>
+        <p>설명 한 줄. 실제 카피를 넣으세요 — 글자 길이가 인상을 바꿉니다.</p>
+        <span class="cta">주요 행동</span>
+        <div class="card"><b>카드 · 제품 UI 자리</b><div class="bar" style="width:78%"></div><div class="bar" style="width:54%"></div></div>
+      </div>
+    </div>
+
+    <div class="opt opt-2">
+      <div class="opt-head"><b>B. 밝게, 옅은 회색 바탕</b><span class="tag">면이 덜 눈부심</span></div>
+      <div class="chips"><i>배경 #F4F4F1</i><i>본문 #161615</i><i>면 #FFFFFF</i></div>
+      <div class="pv">
+        <span class="eb">Eyebrow</span>
+        <h2>여기에 실제<br>제목 카피가 들어갑니다.</h2>
+        <p>설명 한 줄. 실제 카피를 넣으세요 — 글자 길이가 인상을 바꿉니다.</p>
+        <span class="cta">주요 행동</span>
+        <div class="card"><b>카드 · 제품 UI 자리</b><div class="bar" style="width:78%"></div><div class="bar" style="width:54%"></div></div>
+      </div>
+    </div>
+
+    <div class="opt opt-3">
+      <div class="opt-head"><b>C. 어둡게</b><span class="tag">제품 화면이 도드라짐</span></div>
+      <div class="chips"><i>배경 #111111</i><i>본문 #FFFFFF</i><i>면 #1B1B1A</i></div>
+      <div class="pv">
+        <span class="eb">Eyebrow</span>
+        <h2>여기에 실제<br>제목 카피가 들어갑니다.</h2>
+        <p>설명 한 줄. 실제 카피를 넣으세요 — 글자 길이가 인상을 바꿉니다.</p>
+        <span class="cta">주요 행동</span>
+        <div class="card"><b>카드 · 제품 UI 자리</b><div class="bar" style="width:78%"></div><div class="bar" style="width:54%"></div></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="note">
+    <b>이 화면에서 정하지 않는 것.</b> 서체·간격·컴포넌트 형태는 여기서 묻지 않습니다.
+    한 번에 하나만 물어야 답이 빨리 나옵니다. 나머지는 스타일 가이드에서 정합니다.<br>
+    <b>화면마다 톤이 다를 수 있습니다.</b> Hero 같은 지배적인 면이 사이트 전체와 다른 톤을 갖는 경우가 흔합니다.
+    그때는 "Hero는 C, 나머지는 A"처럼 화면 단위로 답을 받으세요.
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERD</title>
+<style>
+:root{--bg:#FFFFFF;--pnl:#FFFFFF;--pnl2:#FAFAFA;--ink:#09090B;--ink2:#52525B;--ink3:#A1A1AA;
+ --line:#E4E4E7;--line2:#D4D4D8;--bad:#B42318;--ok:#0A7B4B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);word-break:keep-all;-webkit-font-smoothing:antialiased;
+ font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+ border-bottom:1.5px solid var(--ink);padding:14px 26px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+h1{font-size:17px;margin:0;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:12px;color:var(--ink2);margin-top:2px}
+.sp{flex:1}
+.seg{display:flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:var(--pnl);padding:7px 14px;font-size:13px;font-weight:700;
+ color:var(--ink2);cursor:pointer;font-family:inherit;white-space:nowrap;transition:background .12s,color .12s}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button.on{background:var(--ink);color:#fff}
+.lab{font-size:11px;color:var(--ink3);font-weight:800;letter-spacing:.12em}
+#find{border:1.5px solid var(--ink);border-radius:8px;padding:6px 11px;font-size:13px;
+ font-family:inherit;width:190px;outline:0}
+#find:focus{box-shadow:0 0 0 3px rgba(9,9,11,.12)}
+#fstat{font-size:12px;color:var(--ink2);min-width:52px}
+.zoom{display:flex;align-items:center;gap:6px}
+.zoom button{border:1.5px solid var(--ink);background:var(--pnl);border-radius:7px;width:28px;height:28px;
+ font-size:14px;font-weight:700;cursor:pointer;line-height:1;font-family:inherit}
+#zval{font-size:12px;color:var(--ink2);min-width:38px;text-align:center;font-variant-numeric:tabular-nums}
+/* 검색 결과 강조 — 나머지를 접지 않고 찾은 것만 띄운다 */
+.seek .cd:not(.found){opacity:.12}
+.seek .ed,.seek .bd{opacity:.05!important}
+.cd.found .bd0{stroke-width:3.4}
+#vpanel{position:fixed;right:18px;bottom:18px;width:330px;background:var(--pnl);
+ border:1.5px solid var(--ink);border-radius:12px;padding:16px 18px;z-index:35;display:none;
+ box-shadow:0 8px 28px rgba(0,0,0,.14)}
+#vpanel.on{display:block}
+#vpanel h3{margin:0 0 10px;font-size:14px;font-weight:800}
+#vpanel .r{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;
+ border-bottom:1px solid var(--line)}
+#vpanel .r b{font-variant-numeric:tabular-nums}
+#vpanel .pass b{color:var(--ok)} #vpanel .fail b{color:var(--bad)}
+#vpanel .sum{margin-top:11px;font-size:12.5px;font-weight:800}
+#vpanel .note{margin-top:9px;font-size:11.5px;color:var(--ink2);line-height:1.5}
+#vpanel .cl2{position:absolute;right:12px;top:12px;border:0;background:none;cursor:pointer;
+ font-size:15px;color:var(--ink2)}
+.hint{font-size:12.5px;color:var(--ink2);padding:9px 26px;border-bottom:1px solid var(--line);background:var(--pnl2)}
+.hint b{color:var(--ink);font-weight:700}
+.scroll{overflow:auto;padding:22px}
+.view{display:none}.view.on{display:block}
+#ovstage svg{width:100%;height:auto;max-width:1720px;margin:0 auto;display:block}
+#ov svg.dim .ove:not(.hot){opacity:.06}
+#ov svg.dim .ovn:not(.hot):not(.src){opacity:.16}
+.ove{transition:opacity .14s}
+.ove.noev{opacity:.95!important}
+#ovwarn{background:#FEF3F2;border-bottom:1.5px solid var(--bad);color:var(--bad);
+ padding:10px 26px;font-size:12.5px;line-height:1.6}
+#ovwarn.info{background:var(--pnl2);border-bottom-color:var(--ink);color:var(--ink2)}
+#ovwarn b{font-weight:800}
+#ovwarn.info b{color:var(--ink)}
+.ovn{transition:opacity .14s;cursor:pointer}
+.ovn .hit{fill:transparent}
+.ove.hot{opacity:1!important;stroke:#09090B;stroke-width:3.4;
+ stroke-dasharray:11 5;animation:flow .75s linear infinite}
+.ove.hot.gap{stroke-width:3;animation:flow .9s linear infinite}
+.ovn.hot .bd0,.ovn.src .bd0{stroke-width:3.4}
+.ovn.src .bd0{animation:pulse 1.15s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+ .ove.hot,.ovn.src .bd0{animation:none!important}.ove.hot{stroke-dasharray:none}}
+#stage svg{display:block;max-width:none}
+.ed,.bd{transition:opacity .12s,stroke-width .12s}
+.cd .hit{fill:transparent}
+.cd{cursor:pointer}
+.m-bundle .ed{display:none}
+.m-biz .bd,.m-biz .ed.sys{display:none}
+.m-all .bd{display:none}
+.dim .ed:not(.hot),.dim .bd:not(.hot){opacity:.04!important}
+.dim .cd:not(.hot){opacity:.16}
+.ed.hot,.bd.hot{opacity:1!important;stroke:#09090B}
+.ed.hot{stroke-width:2.4}
+.cd.hot .bd0{stroke-width:2.6}
+.cd.src .bd0{stroke-width:3.4}
+@keyframes flow{to{stroke-dashoffset:-32}}
+@keyframes pulse{0%,100%{stroke-width:2}50%{stroke-width:4.6}}
+.ed.hot,.bd.hot{stroke-dasharray:11 5;animation:flow .75s linear infinite}
+.cd.src .bd0{animation:pulse 1.15s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){
+ .ed.hot,.bd.hot,.cd.src .bd0{animation:none!important}
+ .ed.hot,.bd.hot{stroke-dasharray:none}}
+
+aside{position:fixed;right:0;top:0;bottom:0;width:344px;background:var(--pnl);border-left:1.5px solid var(--ink);
+ padding:24px;overflow:auto;transform:translateX(100%);transition:transform .18s;z-index:30}
+aside.on{transform:none}
+aside h2{margin:0 0 3px;font-size:20px;font-weight:800;letter-spacing:-.02em}
+aside .ln{font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:16px}
+aside .kv{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}
+aside .kv span:first-child{color:var(--ink2)}
+aside .kv span:last-child{font-weight:700}
+aside h3{font-size:11px;color:var(--ink3);margin:22px 0 8px;letter-spacing:.1em;font-weight:800}
+aside ul{list-style:none;margin:0;padding:0}
+aside li{font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line);line-height:1.45}
+aside li a{color:var(--ink);text-decoration:none;font-weight:700;border-bottom:1.5px solid var(--line2);cursor:pointer}
+aside li b{font-family:ui-monospace,Menlo,monospace;font-weight:500;color:var(--ink3);font-size:11.5px}
+aside .cl{position:absolute;right:18px;top:18px;border:1.5px solid var(--ink);background:var(--pnl);
+ width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:15px;line-height:1}
+.tagx{display:inline-block;padding:2px 8px;border-radius:5px;font-size:10.5px;font-weight:800;border:1.2px solid var(--ink)}
+
+/* ── DBML 편집 ── */
+#editor{position:fixed;left:0;right:0;bottom:0;height:52vh;background:var(--pnl);
+ border-top:2px solid var(--ink);z-index:40;transform:translateY(100%);transition:transform .2s;
+ display:flex;flex-direction:column}
+#editor.on{transform:none}
+#editor .bar{display:flex;gap:10px;align-items:center;padding:11px 20px;border-bottom:1px solid var(--line)}
+#editor .bar strong{font-size:14px;font-weight:800}
+#editor textarea{flex:1;border:0;outline:0;resize:none;padding:16px 20px;font-size:12.5px;line-height:1.6;
+ font-family:ui-monospace,Menlo,monospace;color:var(--ink);background:var(--pnl2)}
+.btn{border:1.5px solid var(--ink);background:var(--pnl);color:var(--ink);border-radius:8px;
+ padding:6px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.pri{background:var(--ink);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+#stat{font-size:12px;font-weight:700}
+#stat.ok{color:var(--ok)} #stat.bad{color:var(--bad)}
+.busy{position:fixed;inset:0;background:rgba(255,255,255,.72);z-index:50;display:none;
+ align-items:center;justify-content:center;font-weight:800;font-size:15px}
+.busy.on{display:flex}
+@media print{header,aside,#editor,.hint{display:none}.scroll{overflow:visible;padding:0}}
+</style></head><body>
+
+<header>
+  <div><h1 id="ttl">ERD</h1><div class="sub" id="sub"></div></div>
+  <div class="sp"></div>
+  <div class="seg" id="views" hidden>
+    <button data-v="ov">업무 흐름</button>
+    <button class="on" data-v="dt">전체 관계도</button>
+  </div>
+  <span class="lab" id="wlab">배선</span>
+  <div class="seg" id="modes">
+    <button class="on" data-m="bundle">그룹 흐름</button>
+    <button data-m="biz">업무</button>
+    <button data-m="all">전체</button>
+  </div>
+  <input id="find" placeholder="테이블 검색" autocomplete="off">
+  <span id="fstat"></span>
+  <div class="zoom">
+    <button id="zout" title="축소">−</button>
+    <span id="zval">100%</span>
+    <button id="zin" title="확대">+</button>
+    <button id="zfit" title="화면 맞춤" style="width:auto;padding:0 9px;font-size:12px">맞춤</button>
+  </div>
+  <button class="btn" id="verify">검증</button>
+  <button class="btn" id="edit">DBML 편집</button>
+</header>
+<div class="hint" id="hint"></div>
+<div class="view" id="ov">
+  <div id="ovwarn" style="display:none"></div>
+  <div class="scroll" id="ovstage">__OVSVG__</div>
+</div>
+<div class="view on" id="dtview"><div class="scroll" id="stage">__SVG__</div></div>
+
+<aside id="pn"><button class="cl" onclick="closePn()">×</button>
+  <h2 id="pk"></h2><div class="ln" id="pl"></div><div id="pm"></div><div id="po"></div><div id="pi"></div></aside>
+
+<div id="editor">
+  <div class="bar">
+    <strong>DBML</strong>
+    <span id="stat"></span>
+    <div class="sp"></div>
+    <button class="btn pri" id="apply">적용 · 재배선</button>
+    <button class="btn" id="copy">복사</button>
+    <button class="btn" id="down">내려받기</button>
+    <button class="btn" id="reset">되돌리기</button>
+    <button class="btn" id="close">닫기</button>
+  </div>
+  <textarea id="src" spellcheck="false"></textarea>
+</div>
+<div class="busy" id="busy">재배선 중…</div>
+<div id="vpanel"><button class="cl2" onclick="document.querySelector('#vpanel').classList.remove('on')">×</button>
+  <h3>검증</h3><div id="vbody"></div></div>
+
+<script>
+/*__ENGINE__*/
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const ORIGINAL=__DBML__;
+let META=__META__, NBR=__NBR__, TMETA=__TMETA__;
+const OVSPEC=__OVSPEC__;
+let mode='bundle', locked=false, dbmlText=ORIGINAL;
+
+const HINTS={
+ bundle:'<b>그룹 흐름</b> — 영역 사이 외래키를 묶은 굵은 선입니다. <b>굵기 = 참조 수.</b> 선에 마우스를 올리면 건수가 나옵니다.',
+ biz:'<b>업무 관계</b> — 담당자·통화·감사 같은 시스템 배선을 뺀 외래키입니다. 카드에 <b>마우스를 올리면</b> 미리보기, <b>클릭</b>하면 고정됩니다.',
+ all:'<b>전체 관계</b> — 시스템 배선을 포함한 모든 외래키입니다. 밀도가 높으니 카드를 클릭해서 보세요.'};
+
+function head(){
+  $('#ttl').textContent=META.title;
+  $('#sub').textContent='테이블 '+META.tables+' · 관계 '+META.refs+' (업무 '+META.biz+' · 시스템 '+META.sys+')'
+    +' · 그룹 '+META.groups+(META.check&&!META.check.ok?'  ⚠ 검증 실패':'');
+  $('#hint').innerHTML=HINTS[mode];
+}
+function setMode(m){
+  mode=m;
+  $$('#modes button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  $('#stage').className='scroll m-'+m;
+  closePn(); head();
+}
+$$('#modes button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
+/* ── 강조 ── */
+function clearHot(){ const s=$('#detail'); if(!s)return;
+  s.classList.remove('dim'); $$('#detail .hot,#detail .src').forEach(x=>x.classList.remove('hot','src')); }
+function closePn(){ locked=false; $('#pn').classList.remove('on'); clearHot(); }
+function hot(t){
+  const s=$('#detail'); s.classList.add('dim');
+  $$('#detail .hot,#detail .src').forEach(x=>x.classList.remove('hot','src'));
+  const keep=new Set([t]);
+  $$('#detail .ed').forEach(p=>{
+    if(p.classList.contains('sys')&&mode!=='all')return;
+    if(p.dataset.a===t||p.dataset.b===t){p.classList.add('hot');keep.add(p.dataset.a);keep.add(p.dataset.b);
+      p.parentNode.appendChild(p);}});
+  $$('#detail .cd').forEach(c=>{ if(c.dataset.t===t)c.classList.add('hot','src');
+    else if(keep.has(c.dataset.t))c.classList.add('hot'); });
+}
+function bindCards(){
+  $$('#detail .cd').forEach(g=>{
+    g.addEventListener('mouseenter',()=>{ if(!locked) hot(g.dataset.t); });
+    g.addEventListener('mouseleave',()=>{ if(!locked) clearHot(); });
+    g.addEventListener('click',ev=>{ ev.stopPropagation(); focusOn(g.dataset.t); });
+  });
+  const s=$('#detail');
+  if(s) s.addEventListener('click',ev=>{ if(!ev.target.closest('.cd')) closePn(); });
+}
+function focusOn(t){
+  locked=true;
+  if(mode==='bundle') setMode('biz');
+  locked=true; hot(t); panel(t);
+}
+const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>';
+function sec(title,arr){
+  if(!arr.length) return '<h3>'+title+'</h3><div style="font-size:12.5px;color:var(--ink3);padding:6px 0">없음</div>';
+  return '<h3>'+title+' · '+arr.length+'</h3><ul>'+arr.map(x=>
+    '<li><a onclick="focusOn(\''+x.o+'\')">'+((TMETA[x.o]||{}).ko||x.o)+'</a> <b>'+x.col+'</b></li>').join('')+'</ul>';
+}
+function panel(t){
+  const m=TMETA[t]; if(!m) return;
+  const c=META.palette[m.dom]||['#eee','#666'];
+  $('#pk').textContent=m.ko; $('#pl').textContent=t;
+  const ls=(NBR[t]||[]).filter(x=>mode==='all'||!isSys({to:x.dir==='out'?x.o:t,col:x.col}));
+  $('#pm').innerHTML='<div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<span class="tagx" style="background:'+c[0]+'">'+m.dom+'</span>'
+    +(m.custom?'<span class="tagx" style="background:#fff">커스텀</span>':'')
+    +(m.stub?'<span class="tagx" style="background:#09090B;color:#fff;border-color:#09090B">정의 없음</span>':'')
+    +'</div>'+kv('총 속성',m.stub?'알 수 없음':m.total+'개')
+    +kv('참조함',ls.filter(x=>x.dir==='out').length+'건')
+    +kv('참조받음',ls.filter(x=>x.dir==='in').length+'건');
+  $('#po').innerHTML=sec('참조함 — 이 테이블의 외래키',ls.filter(x=>x.dir==='out'));
+  $('#pi').innerHTML=sec('참조받음 — 여기를 가리키는 것',ls.filter(x=>x.dir==='in'));
+  $('#pn').classList.add('on');
+}
+
+/* ── DBML 편집 → 재배선 ── */
+const ed=$('#editor'), ta=$('#src'), stat=$('#stat');
+$('#edit').onclick=()=>{ ta.value=dbmlText; ed.classList.add('on'); stat.textContent=''; ta.focus(); };
+$('#close').onclick=()=>ed.classList.remove('on');
+$('#reset').onclick=()=>{ ta.value=ORIGINAL; stat.textContent='원본으로 되돌렸습니다. 적용을 누르세요.'; stat.className=''; };
+$('#copy').onclick=async()=>{
+  try{ await navigator.clipboard.writeText(ta.value); stat.textContent='복사했습니다'; stat.className='ok'; }
+  catch(e){ ta.select(); document.execCommand('copy'); stat.textContent='복사했습니다'; stat.className='ok'; }
+};
+$('#down').onclick=()=>{
+  const b=new Blob([ta.value],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download='schema.dbml'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  stat.textContent='내려받았습니다'; stat.className='ok';
+};
+$('#apply').onclick=()=>{
+  const busy=$('#busy'); busy.classList.add('on');
+  setTimeout(()=>{
+    try{
+      const errs=findBlockErrors(ta.value);
+      if(errs.length) throw Object.assign(new Error(errs[0].msg),{line:errs[0].line});
+      const warn=rebuild(ta.value);
+      stat.textContent='적용됨 · 테이블 '+META.tables+' · 관계 '+META.refs
+        +(ovWarn?'  ⚠ 조감도 '+ovWarn+'건 어긋남':'')
+        +(warn.length?'  (경고 '+warn.length+'건: '+warn[0]+')':'');
+      stat.className=ovWarn?'bad':(warn.length?'':'ok');
+    }
+    catch(e){
+      stat.textContent=(e.line?e.line+'행 — ':'')+'실패: '+e.message;
+      stat.className='bad';
+      if(e.line){ // 해당 줄로 커서를 옮긴다
+        const upto=ta.value.split('\n').slice(0,e.line-1).join('\n').length+1;
+        ta.focus(); ta.setSelectionRange(upto, upto+(ta.value.split('\n')[e.line-1]||'').length);
+      }
+    }
+    busy.classList.remove('on');
+  },30);
+};
+
+function rebuild(src){
+  const model=parseDbml(src);
+  if(!model.tables.size) throw new Error('Table 을 하나도 읽지 못했습니다');
+  const lay=layout(model);
+  const w=wire(model,lay);
+  const pal=palette(lay.order);
+  const svg=renderDetail(model,lay,w,{
+    title:META.title,
+    subtitle:'테이블 '+model.tables.size+' · 관계 '+model.refs.length+' · 그룹 '+lay.order.length+' · 직각 배선',
+    palette:pal});
+
+  // 검증 — 편집 결과도 같은 기준으로 판정한다
+  const chk={pierce:checkPierce(w.paths,w.RECT,w.skips).length,
+             cardOverlap:checkCardOverlap(w.RECT,w.names).length,
+             overlap:measureOverlap(w.paths)};
+
+  dbmlText=src;
+  $('#stage').innerHTML=svg;
+  META={...META,tables:model.tables.size,refs:model.refs.length,groups:lay.order.length,
+    biz:w.isSysRef.filter(x=>!x).length,sys:w.isSysRef.filter(x=>x).length,
+    bundles:w.bundleKeys.length,order:lay.order,
+    palette:Object.fromEntries(lay.order.map(d=>[d,pal.get(d)])),
+    check:{ok:chk.pierce===0&&chk.cardOverlap===0}};
+  NBR={};
+  for(const r of model.refs){
+    (NBR[r.from]=NBR[r.from]||[]).push({o:r.to,col:r.col,dir:'out'});
+    (NBR[r.to]=NBR[r.to]||[]).push({o:r.from,col:r.col,dir:'in'});
+  }
+  TMETA={};
+  for(const [t,p] of lay.pos){
+    const m=model.tables.get(t);
+    TMETA[t]={ko:m.label,dom:p.dom,total:m.total,stub:m.stub,custom:m.custom};
+  }
+  $('#stage').className='scroll m-'+mode;
+  bindCards(); head(); applyZoom(); runFind();
+
+  // 조감도 — 손으로 그린 명세가 '이 스키마에 해당하는지' 먼저 본다.
+  //   해당함  → 배치는 그대로 두고 근거만 다시 대조 (붉은 점선으로 표시)
+  //   해당없음 → 다른 스키마용 그림이므로 DBML 에서 자동 생성으로 갈아끼운다
+  {
+    const fit = OVSPEC ? overviewFit(OVSPEC, model) : null;
+    const useCurated = fit && fit.applicable;
+    const spec = useCurated ? OVSPEC : autoOverview(model, lay);
+    const ovc = verifyOverview(spec, model);
+    $('#ov .scroll').innerHTML = renderOverview(spec, model);
+    bindOverview();
+    META.overviewCheck = ovc;
+    META.overviewAuto = !useCurated;
+
+    const n = ovc.edgeNoEvidence.length + ovc.gapContradicted.length + ovc.missingTables.length;
+    let msg = '';
+    if (!useCurated && OVSPEC) {
+      msg = '<b>이 스키마에는 준비된 조감도가 없어 자동 생성했습니다.</b> '
+        + 'overview.json 의 노드 ' + fit.total + '개 중 ' + fit.alive + '개만 현재 DBML 에 있습니다 — '
+        + '다른 스키마용 그림이라 쓰지 않았습니다. 모든 선은 실제 외래키입니다.';
+    } else if (n) {
+      msg = '<b>조감도 ' + n + '건이 편집된 DBML 과 어긋납니다.</b> '
+        + (ovc.edgeNoEvidence.length ? '근거 잃은 연결 ' + ovc.edgeNoEvidence.length + '건(붉은 점선) ' : '')
+        + (ovc.gapContradicted.length ? '실제로는 있는 관계 ' + ovc.gapContradicted.length + '건 ' : '')
+        + (ovc.missingTables.length ? '없는 테이블 ' + ovc.missingTables.length + '건' : '');
+    }
+    $('#ovwarn').innerHTML = msg;
+    $('#ovwarn').style.display = msg ? '' : 'none';
+    $('#ovwarn').className = (!useCurated && OVSPEC) ? 'info' : '';
+    ovWarn = useCurated ? n : 0;
+  }
+  if(chk.pierce||chk.cardOverlap) console.warn('검증 실패', chk);
+  return model.warnings;
+}
+
+/* ── 검색 ─────────────────────────────────────────────── */
+const findEl=$('#find');
+function runFind(){
+  const q=findEl.value.trim().toLowerCase();
+  const stage=$('#stage');
+  $$('#detail .found').forEach(c=>c.classList.remove('found'));
+  if(!q){ stage.classList.remove('seek'); $('#fstat').textContent=''; return; }
+  let n=0, first=null;
+  $$('#detail .cd').forEach(c=>{
+    const t=c.dataset.t, m=TMETA[t]||{};
+    if(t.toLowerCase().includes(q)||String(m.ko||'').toLowerCase().includes(q)){
+      c.classList.add('found'); n++; if(!first) first=c;
+    }
+  });
+  stage.classList.toggle('seek', n>0);
+  $('#fstat').textContent = n ? n+'개' : '없음';
+  if(first) first.scrollIntoView({block:'center',inline:'center'});
+}
+findEl.addEventListener('input',runFind);
+findEl.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ findEl.value=''; runFind(); findEl.blur(); }
+  if(e.key==='Enter'){ const f=$('#detail .cd.found'); if(f) focusOn(f.dataset.t); }
+});
+
+/* ── 확대·축소 ─────────────────────────────────────────── */
+let zoom=1;
+function applyZoom(){
+  const svg=$('#detail'); if(!svg) return;
+  const vb=svg.getAttribute('viewBox').split(' ').map(Number);
+  svg.setAttribute('width', Math.round(vb[2]*zoom));
+  svg.setAttribute('height', Math.round(vb[3]*zoom));
+  $('#zval').textContent=Math.round(zoom*100)+'%';
+}
+function fitZoom(){
+  const svg=$('#detail'); if(!svg) return;
+  const vb=svg.getAttribute('viewBox').split(' ').map(Number);
+  const box=$('#stage').clientWidth-48;
+  zoom=Math.min(1, Math.max(0.1, box/vb[2]));
+  applyZoom();
+}
+$('#zin').onclick=()=>{ zoom=Math.min(3,zoom*1.25); applyZoom(); };
+$('#zout').onclick=()=>{ zoom=Math.max(0.1,zoom/1.25); applyZoom(); };
+$('#zfit').onclick=fitZoom;
+
+/* ── 검증 — 브라우저 실측 ───────────────────────────────
+   Node 검사는 텍스트 폭이 추정치다. 실제 폰트 메트릭은 브라우저만 안다.
+   함정 둘을 코드로 막는다:
+     · getBBox() 는 숨겨진 요소에서 0 을 반환한다  → 보이는지 먼저 확인
+     · transform 그룹 안에서는 로컬 좌표를 준다    → getScreenCTM 으로 변환 */
+function userBox(el, svg){
+  const b=el.getBBox();
+  const toRoot=svg.getScreenCTM().inverse();
+  const m=el.getScreenCTM();
+  if(!m) return null;
+  const pts=[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]
+    .map(([x,y])=>{ const p=svg.createSVGPoint(); p.x=x; p.y=y;
+      const q=p.matrixTransform(m).matrixTransform(toRoot); return [q.x,q.y]; });
+  const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+  return {x:Math.min(...xs),y:Math.min(...ys),x2:Math.max(...xs),y2:Math.max(...ys)};
+}
+function runVerify(){
+  const svg=$('#detail');
+  const panel=$('#vpanel'), body=$('#vbody');
+  panel.classList.add('on');
+  if(!svg || !svg.getBoundingClientRect().width){
+    body.innerHTML='<div class="note">도면이 화면에 보이지 않아 잴 수 없습니다. '
+      +'숨겨진 요소에서는 getBBox 가 0 을 반환해 <b>거짓 통과</b>가 납니다.</div>';
+    return;
+  }
+  const model=parseDbml(dbmlText);
+  const lay=layout(model), w=wire(model,lay);
+  const geo={pierce:checkPierce(w.paths,w.RECT,w.skips).length,
+             bundle:checkPierce(w.bundlePaths,w.bundleRect,w.bundleSkips).length,
+             card:checkCardOverlap(w.RECT,w.names).length,
+             ov:measureOverlap(w.paths)};
+
+  // 실제 렌더 텍스트가 카드를 넘는가 (추정이 아니라 실측)
+  let over=0, sample='';
+  $$('#detail .cd').forEach(g=>{
+    const r=g.querySelector('.bd0'); if(!r) return;
+    const rx=+r.getAttribute('x'), rw=+r.getAttribute('width');
+    const ry=+r.getAttribute('y'), rh=+r.getAttribute('height');
+    g.querySelectorAll('text').forEach(t=>{
+      if(t.getAttribute('text-anchor')==='end') return;
+      const b=userBox(t,svg); if(!b) return;
+      if(b.x2>rx+rw-4||b.y2>ry+rh-1){ over++; if(!sample) sample=g.dataset.t+' "'+t.textContent+'"'; }
+    });
+  });
+  // 캔버스 이탈
+  const vb=svg.getAttribute('viewBox').split(' ').map(Number);
+  let esc=0;
+  $$('#detail text').forEach(t=>{ const b=userBox(t,svg);
+    if(b&&(b.x<0||b.y<0||b.x2>vb[2]||b.y2>vb[3])) esc++; });
+
+  const rows=[['카드 관통',geo.pierce],['번들 관통',geo.bundle],['카드 겹침',geo.card],
+              ['텍스트 넘침 (실측)',over],['캔버스 이탈 (실측)',esc]];
+  const ok=rows.every(r=>r[1]===0);
+  body.innerHTML=rows.map(([k,v])=>
+    '<div class="r '+(v===0?'pass':'fail')+'"><span>'+k+'</span><b>'+v+'</b></div>').join('')
+    +'<div class="r"><span>선 겹침</span><b>'+geo.ov.overlapPairs+'쌍 / '+geo.ov.overlapLen+'px</b></div>'
+    +'<div class="sum" style="color:'+(ok?'var(--ok)':'var(--bad)')+'">'
+    +(ok?'통과 — 필수 항목 0건':'실패'+(sample?' · 예: '+sample:''))+'</div>'
+    +(META.overviewCheck ? '<div class="r '+(META.overviewCheck.ok?'pass':'fail')+'">'
+        +'<span>조감도 ↔ DBML 대조</span><b>'
+        +(META.overviewCheck.ok?'통과':'실패 '+(META.overviewCheck.edgeNoEvidence.length
+          +META.overviewCheck.gapContradicted.length)+'건')+'</b></div>' : '')
+    +'<div class="note">텍스트는 <b>추정 폭이 아니라 브라우저 실측</b>입니다. '
+    +'선 겹침은 실패 항목이 아닙니다 — 허브 앞에서 모이는 건 자연스럽습니다.</div>';
+}
+$('#verify').onclick=runVerify;
+
+/* 단축키 */
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT') return;
+  if(e.key==='/'){ e.preventDefault(); findEl.focus(); }
+  if(e.key==='0'){ fitZoom(); }
+});
+
+/* ── 뷰 전환 (조감도 / 전체 관계도) ─────────────────────── */
+const HINT_OV='<b>업무 흐름 조감도</b> — 고객 설명용 한 장입니다. 카드에 <b>마우스를 올리면</b> '
+ +'연결된 곳과 선이 흐르며 강조됩니다. 모든 연결선은 DBML 과 대조된 실제 외래키이고, '
+ +'검정 점선 <b>①②</b>는 <b>있어야 할 것 같으나 실제로는 없는 연결</b>입니다.';
+function setView(v){
+  $$('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  $('#ov').classList.toggle('on',v==='ov');
+  $('#dtview').classList.toggle('on',v==='dt');
+  const dt = v==='dt';
+  $('#modes').style.display = dt?'':'none';
+  $('#wlab').style.display  = dt?'':'none';
+  $('#find').style.display  = dt?'':'none';
+  $('#fstat').style.display = dt?'':'none';
+  $('.zoom').style.display  = dt?'':'none';
+  closePn(); ovClear();
+  $('#hint').innerHTML = dt ? HINTS[mode] : HINT_OV;
+}
+if($('#ov svg')){
+  $('#views').hidden=false;
+  $$('#views button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+}
+
+/* ── 조감도 hover — 재렌더 후에도 다시 걸 수 있게 함수로 둔다 ── */
+const ovSvg=()=>$('#ov svg');
+function ovClear(){ const s=ovSvg(); if(!s)return; s.classList.remove('dim');
+  s.querySelectorAll('.ove,.ovn').forEach(x=>x.classList.remove('hot','src')); }
+function ovHover(id){
+  const s=ovSvg(); if(!s)return;
+  s.classList.add('dim');
+  s.querySelectorAll('.ove,.ovn').forEach(x=>x.classList.remove('hot','src'));
+  const keep=new Set([id]);
+  s.querySelectorAll('.ove').forEach(p=>{ if(p.dataset.a===id||p.dataset.b===id){
+    p.classList.add('hot'); keep.add(p.dataset.a); keep.add(p.dataset.b);
+    p.parentNode.appendChild(p); }});
+  s.querySelectorAll('.ovn').forEach(n=>{ if(n.dataset.id===id) n.classList.add('src','hot');
+                   else if(keep.has(n.dataset.id)) n.classList.add('hot'); });
+}
+function bindOverview(){
+  const s=ovSvg(); if(!s)return;
+  s.querySelectorAll('.ovn').forEach(n=>{
+    n.addEventListener('mouseenter',()=>ovHover(n.dataset.id));
+    n.addEventListener('mouseleave',e=>{
+      if(!e.relatedTarget||!e.relatedTarget.closest||!e.relatedTarget.closest('.ovn')) ovClear(); });
+  });
+  s.addEventListener('mouseleave',ovClear);
+}
+bindOverview();
+
+head(); setMode('bundle'); bindCards(); applyZoom();
+if($('#ov svg')) setView('dt');
+window.focusOn=focusOn; window.closePn=closePn;
+</script></body></html>

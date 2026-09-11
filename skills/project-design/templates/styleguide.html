@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>스타일 가이드 — {{프로젝트명}}</title>
+<!--
+  살아있는 스타일 가이드. Docs/_design/styleguide.html
+
+  값을 여기에 적지 않는다. tokens.css 를 읽어 **실제로 렌더**한다.
+  그래서 토큰을 고치면 이 페이지가 자동으로 따라오고, 문서와 어긋날 수 없다.
+
+  **목록을 손으로 관리하지 않는다.** tokens.css 의 :root 에 선언된 커스텀 속성을
+  전부 읽어 값의 생김새로 분류해 렌더한다. 토큰을 추가하면 여기에 저절로 나타난다.
+
+  예전에는 이 파일에 이름 목록이 박혀 있었고 "없는 토큰은 조용히 건너뛴다"고
+  적혀 있었다. 조용히 건너뛰면 조용히 낡는다 — 실제로 새로 만든 토큰 몇 개가
+  스타일 가이드에 없는 채로 여러 회차가 지나갔다.
+-->
+<link rel="stylesheet" href="tokens.css">
+<style>
+body{background:var(--bg-subtle); padding:0 0 100px}
+.wrap{max-width:1080px; margin:0 auto; padding:0 28px}
+header.sg{padding:56px 0 32px; border-bottom:1px solid var(--line); margin-bottom:44px}
+header.sg h1{font-size:40px; margin:0 0 8px}
+header.sg p{margin:0; color:var(--ink-muted); font-size:15px}
+
+section.sg{margin-bottom:56px}
+section.sg > h2{font-size:22px; margin:0 0 6px; letter-spacing:-.01em}
+section.sg > .hint{margin:0 0 20px; color:var(--ink-muted); font-size:13.5px; line-height:1.6}
+
+.grid{display:grid; gap:12px}
+.g-color{grid-template-columns:repeat(auto-fill,minmax(212px,1fr))}
+.card{background:var(--bg); border:1px solid var(--line); border-radius:10px; overflow:hidden}
+
+/* 색 */
+.chip{height:78px; border-bottom:1px solid var(--line)}
+.card-b{padding:11px 13px}
+.name{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--ink)}
+.val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--ink-muted);
+  margin-top:2px; text-transform:uppercase}
+.ratios{display:flex; gap:6px; margin-top:9px; flex-wrap:wrap}
+.ratio{display:flex; align-items:center; gap:4px; font-size:11px;
+  padding:2px 7px; border-radius:4px; background:var(--bg-subtle); color:var(--ink-secondary)}
+.ok{background:#e6f4ea; color:#0f7b6c}
+.warn{background:#fdecea; color:#b02f1c}
+
+/* 타이포 */
+.type-row{display:flex; align-items:baseline; gap:20px; padding:16px 0;
+  border-bottom:1px solid var(--line)}
+.type-meta{flex:none; width:200px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11.5px; color:var(--ink-muted); line-height:1.5}
+.type-meta b{display:block; color:var(--ink); font-size:12px; font-weight:600}
+.type-sample{flex:1; min-width:0; color:var(--ink); overflow:hidden; text-overflow:ellipsis}
+
+/* 간격 */
+.space-row{display:flex; align-items:center; gap:16px; padding:9px 0}
+.space-meta{flex:none; width:200px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11.5px; color:var(--ink-muted)}
+.space-meta b{color:var(--ink)}
+.bar{height:14px; border-radius:3px; background:var(--accent); opacity:.75}
+
+/* 형태 */
+.g-shape{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.shape-box{height:76px; background:var(--bg); border:1px solid var(--line-strong); margin-bottom:9px}
+
+/* 상태 */
+.states{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+.btn-disabled{opacity:.45; pointer-events:none}
+.btn-focus{outline:2px solid var(--accent); outline-offset:2px}
+.btn-loading::before{content:""; width:13px; height:13px; margin-right:8px; border-radius:50%;
+  border:2px solid currentColor; border-top-color:transparent; animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.state-label{font-size:11.5px; color:var(--ink-muted); text-align:center; margin-top:5px}
+.state-cell{display:flex; flex-direction:column; align-items:center}
+
+/* 해도 되는 것 / 안 되는 것 */
+.g-do{grid-template-columns:1fr 1fr; gap:16px}
+.do,.dont{padding:18px; border-radius:10px; border:1px solid var(--line); background:var(--bg)}
+.do{border-left:3px solid #0f7b6c}
+.dont{border-left:3px solid #b02f1c}
+.do h4,.dont h4{margin:0 0 10px; font-size:13px; letter-spacing:.02em}
+.do h4{color:#0f7b6c} .dont h4{color:#b02f1c}
+.do ul,.dont ul{margin:0; padding-left:18px; font-size:13.5px; line-height:1.7; color:var(--ink-secondary)}
+
+.empty-note{color:var(--ink-muted); font-size:13.5px; padding:14px 0}
+
+/* 상태 화면 */
+.g-state{grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px}
+.state-card{border:1px solid var(--line); border-radius:12px; background:var(--bg); overflow:hidden}
+.state-card > h4{margin:0; padding:10px 14px; border-bottom:1px solid var(--line);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ink-muted);
+  letter-spacing:.04em; font-weight:600}
+.state-body{padding:22px 16px; min-height:132px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; text-align:center; gap:9px}
+.state-body p{margin:0; font-size:13px; color:var(--ink-secondary); line-height:1.6; max-width:30ch}
+.state-body strong{font-size:14.5px; letter-spacing:-.01em}
+.state-icon{width:30px; height:30px; border-radius:50%; display:grid; place-items:center;
+  border:1px solid var(--line-strong); color:var(--ink-muted); font-size:14px}
+.state-msg{display:flex; align-items:center; gap:8px; width:100%; padding:10px 12px;
+  border-radius:9px; font-size:12.5px; text-align:left; line-height:1.5}
+.state-msg.ok{background:#e6f4ea; color:#0f7b6c}
+.state-msg.err{background:#fdecea; color:#b02f1c}
+.spin{width:15px; height:15px; border-radius:50%; border:2px solid var(--line-strong);
+  border-top-color:var(--ink); animation:spin .7s linear infinite}
+.field{width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px;
+  font-size:12.5px; color:var(--ink-muted); text-align:left}
+.field.bad{border-color:#b02f1c}
+@media (max-width:720px){
+  .type-meta,.space-meta{width:118px}
+  .g-do{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="sg">
+    <h1>스타일 가이드</h1>
+    <p>{{프로젝트명}} · <code>tokens.css</code> 에 선언된 토큰 <b id="token-count">…</b>개를 전부 읽어 실제로 렌더한 값입니다.
+      목록을 손으로 관리하지 않으므로 <b>빠뜨릴 수 없습니다.</b></p>
+  </header>
+
+  <section class="sg">
+    <h2>색</h2>
+    <p class="hint">배경색 대비 명도비를 자동 계산합니다. <b>AA</b> 는 본문 4.5:1, <b>AA Large</b> 는 큰 글자 3:1 기준입니다.
+      통과하지 못한 색은 텍스트에 쓰지 않습니다.</p>
+    <div class="grid g-color" id="colors"></div>
+  </section>
+
+  <section class="sg">
+    <h2>타이포그래피</h2>
+    <p class="hint">현재 창 크기에서 실제로 계산된 픽셀 값입니다. <code>clamp()</code> 를 쓰면 창을 줄였다 늘려 보세요.</p>
+    <div id="type"></div>
+  </section>
+
+  <section class="sg">
+    <h2>간격</h2>
+    <p class="hint">막대 길이가 실제 값입니다.</p>
+    <div id="space"></div>
+  </section>
+
+  <section class="sg">
+    <h2>형태</h2>
+    <div class="grid g-shape" id="shape"></div>
+  </section>
+
+  <section class="sg">
+    <h2>그림자</h2>
+    <p class="hint">쓰기로 한 곳에만 씁니다. 섹션·카드 구분은 선과 배경 차이로 하세요.</p>
+    <div class="grid g-shape" id="shadow"></div>
+  </section>
+
+  <section class="sg">
+    <h2>서체</h2>
+    <div id="font"></div>
+  </section>
+
+  <section class="sg">
+    <h2>기타 토큰</h2>
+    <p class="hint">위 분류에 들어가지 않은 값입니다. 안 보이면 낡으므로 여기에 전부 나옵니다.</p>
+    <div id="other"></div>
+  </section>
+
+  <section class="sg">
+    <h2>버튼 상태</h2>
+    <p class="hint">인터랙션 문서가 요구하는 8개 상태입니다. 하나라도 빠지면 미완성입니다.</p>
+    <div class="states">
+      <div class="state-cell"><a class="btn btn-primary" href="#">기본</a><span class="state-label">Default</span></div>
+      <div class="state-cell"><a class="btn btn-primary" href="#" style="background:var(--brand-hover)">호버</a><span class="state-label">Hover</span></div>
+      <div class="state-cell"><a class="btn btn-primary btn-focus" href="#">포커스</a><span class="state-label">Focus</span></div>
+      <div class="state-cell"><a class="btn btn-primary" href="#" style="filter:brightness(.9)">눌림</a><span class="state-label">Active</span></div>
+      <div class="state-cell"><a class="btn btn-primary btn-disabled" href="#" data-state="disabled">비활성</a><span class="state-label">Disabled</span></div>
+      <div class="state-cell"><a class="btn btn-primary btn-loading" href="#" data-state="loading">처리 중</a><span class="state-label">Loading</span></div>
+      <div class="state-cell"><a class="btn btn-primary" href="#" style="background:#0f7b6c" data-state="success">완료</a><span class="state-label">Success</span></div>
+      <div class="state-cell"><a class="btn btn-primary" href="#" style="background:#b02f1c" data-state="error">오류</a><span class="state-label">Error</span></div>
+    </div>
+    <div class="states" style="margin-top:16px">
+      <div class="state-cell"><a class="btn btn-secondary" href="#">보조 버튼</a><span class="state-label">Secondary</span></div>
+    </div>
+  </section>
+
+  <section class="sg">
+    <h2>상태 화면</h2>
+    <p class="hint">화면 정의서가 정의한 상태입니다. 버튼 8상태와 별개로 <b>화면 단위</b>로 그려야
+      구현 단계에서 각자 지어내지 않습니다. 각 블록에 <code>data-state="이름"</code>을 붙이면
+      <code>build.mjs check</code>가 문서와 대조합니다.</p>
+    <div class="grid g-state">
+
+      <div class="state-card" data-state="empty">
+        <h4>EMPTY — 목록이 비었을 때</h4>
+        <div class="state-body">
+          <span class="state-icon">—</span>
+          <strong>{{빈 상태 제목}}</strong>
+          <p>{{빈 상태 안내 — 다음에 할 수 있는 행동을 준다}}</p>
+          <a class="btn btn-secondary" href="#" style="height:36px;min-height:36px;font-size:.82rem">{{다음 행동}}</a>
+        </div>
+      </div>
+
+      <div class="state-card" data-state="idle">
+        <h4>IDLE — 문의 폼 기본</h4>
+        <div class="state-body" style="align-items:stretch">
+          <div class="field">{{입력 항목 1}}</div>
+          <div class="field">{{입력 항목 2}}</div>
+          <a class="btn btn-primary" href="#" style="height:38px;min-height:38px;font-size:.85rem">보내기</a>
+        </div>
+      </div>
+
+      <div class="state-card" data-state="loading">
+        <h4>SUBMITTING — 전송 중</h4>
+        <div class="state-body">
+          <span class="spin"></span>
+          <p>보내는 중입니다. 중복 제출은 막힙니다.</p>
+        </div>
+      </div>
+
+      <div class="state-card" data-state="success">
+        <h4>SUCCESS — 전송 완료</h4>
+        <div class="state-body" style="align-items:stretch">
+          <div class="state-msg ok">{{성공 메시지}}</div>
+          <p style="text-align:left">서버 성공 응답 뒤에만 이 상태로 바꿉니다.</p>
+        </div>
+      </div>
+
+      <div class="state-card" data-state="error">
+        <h4>ERROR — 전송 실패</h4>
+        <div class="state-body" style="align-items:stretch">
+          <div class="field bad">{{필드 검증 메시지}}</div>
+          <div class="state-msg err">{{전송 실패 메시지 — 입력은 보존한다}}</div>
+          <p style="text-align:left">입력을 보존하고 재시도 · 메일 대체 경로를 함께 제공합니다.</p>
+        </div>
+      </div>
+
+      <div class="state-card" data-state="disabled">
+        <h4>DISABLED — 필수 입력 전</h4>
+        <div class="state-body">
+          <a class="btn btn-primary btn-disabled" href="#" style="height:38px;min-height:38px;font-size:.85rem">보내기</a>
+          <p>왜 눌리지 않는지 폼 안에서 함께 알립니다.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="sg">
+    <h2>해도 되는 것 / 안 되는 것</h2>
+    <p class="hint">2단계 디자인 시스템의 안티패턴을 여기에 옮겨 적습니다. 시안이 이 목록을 어기면 안 됩니다.</p>
+    <div class="grid g-do">
+      <div class="do">
+        <h4>이렇게</h4>
+        <ul>
+          <li>{{지향 1}}</li>
+          <li>{{지향 2}}</li>
+        </ul>
+      </div>
+      <div class="dont">
+        <h4>이렇게는 안 됨</h4>
+        <ul>
+          <li>{{안티패턴 1}}</li>
+          <li>{{안티패턴 2}}</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="mockup-flag">스타일 가이드 · {{YYYY-MM-DD}}</div>
+
+<script>
+(function(){
+  var root = getComputedStyle(document.documentElement);
+  var get = function(n){ return root.getPropertyValue(n).trim(); };
+
+  /* ── 토큰 자동 수집 ─────────────────────────────────────
+     선언된 것을 전부 읽는다. 손으로 관리하는 목록이 없으므로 빠뜨릴 수 없다. */
+  function allTokens(){
+    var names = [];
+    try{
+      for(var i = 0; i < root.length; i++){
+        var n = root[i];
+        if(n && n.indexOf('--') === 0) names.push(n);
+      }
+    }catch(e){}
+    return names;
+  }
+
+  /* 값의 생김새로 분류한다. 이름 규칙에만 기대지 않는다. */
+  function classify(name, value){
+    if(/^--shadow/.test(name)) return 'shadow';
+    if(/^--font/.test(name) || /(sans-serif|serif|monospace)\s*$/.test(value)) return 'font';
+    if(/^--ease/.test(name) || /cubic-bezier|steps\(/.test(value)) return 'other';
+    if(/gradient\(/.test(value)) return 'other';
+    if(toRgb(value)) return 'color';
+    if(/^--text/.test(name)) return 'text';
+    if(/^--radius/.test(name)) return 'shape';
+    if(/^[.\d]|clamp\(|calc\(|min\(|max\(/.test(value)) return 'space';
+    return 'other';
+  }
+
+  var TOKENS = { color:[], text:[], space:[], shape:[], shadow:[], font:[], other:[] };
+
+  // ── 색: 명도비 계산 (WCAG) ───────────────────────────────
+  function toRgb(c){
+    var d = document.createElement('div');
+    // 유효하지 않은 값은 style.color 대입이 무시된다. 그걸 확인하지 않으면
+    // clamp()·길이값까지 '상속된 검정'으로 읽혀 전부 색으로 분류된다.
+    d.style.color = '';
+    d.style.color = c;
+    if(!d.style.color) return null;
+    document.body.appendChild(d);
+    var m = getComputedStyle(d).color.match(/[\d.]+/g);
+    d.remove();
+    return m ? m.slice(0,3).map(Number) : null;
+  }
+  function lum(rgb){
+    var a = rgb.map(function(v){
+      v /= 255;
+      return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);
+    });
+    return 0.2126*a[0] + 0.7152*a[1] + 0.0722*a[2];
+  }
+  function ratio(a, b){
+    var l1 = lum(a), l2 = lum(b);
+    return (Math.max(l1,l2) + 0.05) / (Math.min(l1,l2) + 0.05);
+  }
+  function badge(r, label){
+    var pass = r >= 4.5, large = r >= 3;
+    var cls = pass ? 'ok' : (large ? '' : 'warn');
+    var tag = pass ? 'AA' : (large ? 'AA Large' : '미달');
+    return '<span class="ratio ' + cls + '">' + label + ' ' + r.toFixed(2) + ':1 · ' + tag + '</span>';
+  }
+
+  allTokens().forEach(function(n){
+    var v = get(n);
+    if(!v) return;
+    var k = classify(n, v);
+    (TOKENS[k] || TOKENS.other).push(n);
+  });
+
+  var bgRgb = toRgb(get('--bg') || '#ffffff');
+  var inkRgb = toRgb(get('--ink') || '#000000');
+  var out = '';
+  TOKENS.color.forEach(function(n){
+    var v = get(n);
+    if(!v) return;
+    var rgb = toRgb(v);
+    if(!rgb) return;
+    out += '<div class="card"><div class="chip" style="background:' + v + '"></div>' +
+      '<div class="card-b"><div class="name">' + n + '</div>' +
+      '<div class="val">' + v + '</div><div class="ratios">' +
+      badge(ratio(rgb, bgRgb), '배경') + badge(ratio(rgb, inkRgb), '본문색') +
+      '</div></div></div>';
+  });
+  document.getElementById('colors').innerHTML =
+    out || '<p class="empty-note">색 토큰을 찾지 못했습니다. tokens.css 를 확인하세요.</p>';
+
+  // ── 타이포: 실제 계산된 px 를 읽는다 ─────────────────────
+  var SAMPLE = '다시 봐도 좋은 문장 Aa Bb 0123';
+  var t = '';
+  TOKENS.text.forEach(function(n){
+    var v = get(n);
+    if(!v) return;
+    t += '<div class="type-row"><div class="type-meta"><b>' + n + '</b>' +
+      '<span data-px="' + n + '">…</span><br>' + v + '</div>' +
+      '<div class="type-sample" style="font-size:var(' + n + ')">' + SAMPLE + '</div></div>';
+  });
+  t += '<div class="type-row"><div class="type-meta"><b>본문</b><span>16px</span></div>' +
+       '<div class="type-sample" style="font-size:16px">' + SAMPLE + '</div></div>';
+  document.getElementById('type').innerHTML =
+    t || '<p class="empty-note">타이포 토큰을 찾지 못했습니다.</p>';
+
+  function refreshPx(){
+    document.querySelectorAll('.type-row').forEach(function(row){
+      var el = row.querySelector('[data-px]');
+      var s = row.querySelector('.type-sample');
+      if(el && s) el.textContent = Math.round(parseFloat(getComputedStyle(s).fontSize)) + 'px';
+    });
+  }
+  refreshPx();
+  window.addEventListener('resize', refreshPx);
+
+  // ── 간격 ────────────────────────────────────────────────
+  var sp = '';
+  TOKENS.space.forEach(function(n){
+    var v = get(n);
+    if(!v) return;
+    sp += '<div class="space-row"><div class="space-meta"><b>' + n + '</b><br>' + v + '</div>' +
+      '<div class="bar" style="width:min(var(' + n + '), 100%)"></div></div>';
+  });
+  document.getElementById('space').innerHTML =
+    sp || '<p class="empty-note">간격 토큰을 찾지 못했습니다.</p>';
+
+  // ── 형태 ────────────────────────────────────────────────
+  var sh = '';
+  TOKENS.shape.forEach(function(n){
+    var v = get(n);
+    if(!v) return;
+    sh += '<div><div class="shape-box" style="border-radius:var(' + n + ')"></div>' +
+      '<div class="name">' + n + '</div><div class="val">' + v + '</div></div>';
+  });
+  document.getElementById('shape').innerHTML =
+    sh || '<p class="empty-note">형태 토큰을 찾지 못했습니다.</p>';
+
+  function renderInto(id, list, fn){
+    var el = document.getElementById(id);
+    if(!el) return;
+    var section = el.closest('section.sg');
+    if(!list.length){ if(section) section.style.display = 'none'; return; }
+    el.innerHTML = list.map(function(n){ return fn(n, get(n)); }).join('');
+  }
+
+  // ── 그림자 ──────────────────────────────────────────────
+  renderInto('shadow', TOKENS.shadow, function(n, v){
+    return '<div><div class="shape-box" style="border:0;border-radius:14px;box-shadow:var(' + n + ')"></div>' +
+      '<div class="name">' + n + '</div><div class="val" style="text-transform:none">' + v + '</div></div>';
+  });
+
+  // ── 서체 ────────────────────────────────────────────────
+  renderInto('font', TOKENS.font, function(n, v){
+    return '<div class="type-row"><div class="type-meta"><b>' + n + '</b><br>' + v.split(',')[0] + '</div>' +
+      '<div class="type-sample" style="font-family:var(' + n + ')">' + SAMPLE + '</div></div>';
+  });
+
+  // ── 기타 — 분류되지 않은 토큰도 반드시 보여준다. 안 보이는 토큰이 낡는다.
+  renderInto('other', TOKENS.other, function(n, v){
+    return '<div class="space-row"><div class="space-meta"><b>' + n + '</b></div>' +
+      '<div class="val" style="text-transform:none;flex:1;min-width:0;word-break:break-all">' + v + '</div></div>';
+  });
+
+  var total = Object.keys(TOKENS).reduce(function(a,k){ return a + TOKENS[k].length; }, 0);
+  var cnt = document.getElementById('token-count');
+  if(cnt) cnt.textContent = total;
+})();
+</script>
+</body>
+</html>

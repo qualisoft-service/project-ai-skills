@@ -1,0 +1,78 @@
+// 회귀용 익명 샘플 ① — 작은 커머스 스키마. 그룹 3개.
+// 검증기가 정상 동작하는지 보는 최소 케이스다.
+
+Table customer {
+  customer_id uniqueidentifier [pk, not null, note: '고객 ID']
+  name nvarchar(80) [not null, note: '고객명']
+  email nvarchar(160) [note: '이메일']
+  Note: '고객 (Customer) · 표준 · 총 속성 6개 · 표시 3개'
+}
+
+Table address {
+  address_id uniqueidentifier [pk, not null, note: '주소 ID']
+  customer_id uniqueidentifier [not null, note: '고객 → customer']
+  line1 nvarchar(200) [note: '도로명']
+  Note: '배송지 (Address) · 표준 · 총 속성 7개 · 표시 3개'
+}
+
+Table product {
+  product_id uniqueidentifier [pk, not null, note: '상품 ID']
+  name nvarchar(160) [not null, note: '상품명']
+  category_id uniqueidentifier [note: '분류 → category']
+  Note: '상품 (Product) · 표준 · 총 속성 9개 · 표시 3개'
+}
+
+Table category {
+  category_id uniqueidentifier [pk, not null, note: '분류 ID']
+  name nvarchar(80) [not null, note: '분류명']
+  parent_id uniqueidentifier [note: '상위 분류 → category']
+  Note: '분류 (Category) · 표준 · 총 속성 4개 · 표시 3개'
+}
+
+Table orders {
+  order_id uniqueidentifier [pk, not null, note: '주문 ID']
+  customer_id uniqueidentifier [not null, note: '고객 → customer']
+  address_id uniqueidentifier [note: '배송지 → address']
+  placed_at datetime [not null, note: '주문일시']
+  Note: '주문 (Orders) · 표준 · 총 속성 11개 · 표시 4개'
+}
+
+Table order_line {
+  order_line_id uniqueidentifier [pk, not null, note: '주문상세 ID']
+  order_id uniqueidentifier [not null, note: '주문 → orders']
+  product_id uniqueidentifier [not null, note: '상품 → product']
+  qty int [not null, note: '수량']
+  Note: '주문 상세 (OrderLine) · 표준 · 총 속성 6개 · 표시 4개'
+}
+
+Table payment {
+  payment_id uniqueidentifier [pk, not null, note: '결제 ID']
+  order_id uniqueidentifier [not null, note: '주문 → orders']
+  amount money [not null, note: '금액']
+  Note: '결제 (Payment) · 표준 · 총 속성 8개 · 표시 3개'
+}
+
+TableGroup "고객" {
+  customer
+  address
+}
+
+TableGroup "상품" {
+  product
+  category
+}
+
+TableGroup "주문" {
+  orders
+  order_line
+  payment
+}
+
+Ref: address.customer_id > customer.customer_id
+Ref: product.category_id > category.category_id
+Ref: category.parent_id > category.category_id
+Ref: orders.customer_id > customer.customer_id
+Ref: orders.address_id > address.address_id
+Ref: order_line.order_id > orders.order_id
+Ref: order_line.product_id > product.product_id
+Ref: payment.order_id > orders.order_id

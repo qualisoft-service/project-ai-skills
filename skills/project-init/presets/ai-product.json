@@ -1,0 +1,12 @@
+{
+  "name": "ai-product",
+  "label": "AI 제품 / LLM 기능",
+  "description": "모델을 쓰는 제품. 평가 기준·실패 모드·비용·데이터 취급이 일반 소프트웨어와 다르다.",
+  "modules": [
+    "core",
+    "product",
+    "ai",
+    "design",
+    "ops"
+  ]
+}

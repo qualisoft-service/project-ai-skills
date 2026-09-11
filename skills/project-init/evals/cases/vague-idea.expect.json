@@ -1,0 +1,11 @@
+{
+  "case": "vague-idea",
+  "note": "정보가 거의 없는 입력. 지어내지 않고 미결정으로 남기는지를 본다.",
+  "preset": "web-corporate",
+  "minBlockers": 3,
+  "minTodos": 3,
+  "noLeftoverPlaceholders": true,
+  "noOutcomeClaims": true,
+  "requireOptionsRecorded": true,
+  "mustMentionUndecided": ["도메인", "로고"]
+}

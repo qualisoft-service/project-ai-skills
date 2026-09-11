@@ -1,0 +1,15 @@
+{
+  "name": "internal-system",
+  "label": "사내 시스템 / 어드민",
+  "description": "업무 시스템. 권한·업무 프로세스·기존 시스템 연동·데이터 이관이 핵심이다.",
+  "modules": [
+    "core",
+    "process",
+    "product",
+    "ux",
+    "design",
+    "backend",
+    "engineering",
+    "ops"
+  ]
+}

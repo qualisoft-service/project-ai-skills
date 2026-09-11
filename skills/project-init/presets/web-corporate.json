@@ -1,0 +1,116 @@
+{
+  "name": "web-corporate",
+  "label": "기업 웹사이트 / 코퍼릿 사이트",
+  "description": "마케팅 목적의 다중 페이지 웹사이트. 브랜드·콘텐츠·SEO 비중이 크다.",
+  "modules": [
+    "core",
+    "brand",
+    "audience",
+    "product",
+    "ux",
+    "design",
+    "a11y",
+    "web",
+    "engineering",
+    "ops"
+  ],
+  "options": [
+    {
+      "id": "seo",
+      "label": "SEO — 검색엔진 노출",
+      "default": true,
+      "detail": "메타데이터, 구조화 데이터, 사이트맵. 공개 웹사이트면 거의 항상 켠다."
+    },
+    {
+      "id": "naver",
+      "label": "네이버 대응",
+      "default": true,
+      "detail": "서치어드바이저 등록, 브랜드 검색 전략. 국내 대상이면 켠다."
+    },
+    {
+      "id": "geo",
+      "label": "GEO — 생성형 AI 노출",
+      "default": false,
+      "detail": "AI 크롤러 허용 정책, 엔티티 일관성. 측정 도구가 없어 효과 검증이 어렵다는 점을 알고 켠다."
+    },
+    {
+      "id": "analytics",
+      "label": "웹 애널리틱스 (GA4 등)",
+      "default": true,
+      "detail": "방문자 행동 측정. 쿠키를 쓰면 동의 배너 검토가 따라온다.",
+      "cost": "도구는 무료로 시작 가능. 운영 시 이벤트 설계·검수 시간이 든다."
+    },
+    {
+      "id": "tagmanager",
+      "label": "태그 관리 (GTM)",
+      "default": false,
+      "detail": "코드 수정 없이 태그를 관리한다. 스크립트가 늘어 성능 예산과 충돌할 수 있다.",
+      "cost": "도구 자체는 무료. 태그 운영·품질 관리 시간이 든다.",
+      "conflicts": [
+        "perfbudget"
+      ]
+    },
+    {
+      "id": "adtracking",
+      "label": "전환 추적 · 광고 픽셀",
+      "default": false,
+      "detail": "광고를 집행할 때만 필요. 개인정보 동의 대상이다.",
+      "requires": [
+        "consent"
+      ],
+      "cost": "매체 계정 비용 외에 동의·태그 운영 시간이 든다."
+    },
+    {
+      "id": "consent",
+      "label": "쿠키 · 개인정보 동의",
+      "default": false,
+      "detail": "법무 판단이 필요하다. 추적 도구를 쓰면 대체로 필요해진다.",
+      "cost": "동의 관리 도구를 쓰면 월 비용 또는 트래픽 기반 비용이 생길 수 있다."
+    },
+    {
+      "id": "a11y",
+      "label": "접근성 (WCAG AA)",
+      "default": true,
+      "detail": "끄지 않기를 권한다. 공공·금융은 사실상 필수."
+    },
+    {
+      "id": "perfbudget",
+      "label": "성능 예산 게이트",
+      "default": true,
+      "detail": "릴리즈를 막는 수치 기준을 둘지. 끄면 목표만 남고 강제력이 없다."
+    },
+    {
+      "id": "i18n",
+      "label": "다국어",
+      "default": false,
+      "detail": "켜면 IA·라우팅·콘텐츠 모델이 모두 바뀐다. 나중에 켜기 가장 비싼 항목이다.",
+      "cost": "번역·검수·콘텐츠 운영 비용이 언어 수에 따라 반복된다.",
+      "laterEnableCost": "high"
+    },
+    {
+      "id": "cms",
+      "label": "CMS 연동",
+      "default": false,
+      "detail": "지금 안 쓰더라도 CMS-ready 구조는 유지한다.",
+      "cost": "실제 CMS 도입 시 서비스 요금과 콘텐츠 모델 운영 부담이 생긴다."
+    },
+    {
+      "id": "contactform",
+      "label": "문의 폼",
+      "default": true,
+      "detail": "백엔드가 없으면 데모 상태임을 명시해야 한다.",
+      "modes": [
+        "external",
+        "custom-api",
+        "mailto"
+      ],
+      "cost": "외부 폼은 사용량 요금, custom-api는 서버·메일·스팸 대응 운영비가 들 수 있다."
+    },
+    {
+      "id": "darkmode",
+      "label": "다크 모드",
+      "default": false,
+      "detail": "토큰을 이중으로 유지하는 비용이 든다."
+    }
+  ]
+}

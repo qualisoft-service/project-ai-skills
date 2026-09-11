@@ -1,0 +1,53 @@
+{
+  "name": "@qualisoft/ai-skills",
+  "version": "1.0.0",
+  "description": "기획 인터뷰부터 문서 체계·디자인 시안·구현까지 이어지는 AI 에이전트 스킬 5종. Claude Code · Codex · Gemini 등 어느 도구에서나 쓴다. 외부 의존성 없음.",
+  "keywords": [
+    "ai-skills",
+    "claude-code",
+    "claude",
+    "codex",
+    "gemini",
+    "agent-skills",
+    "wbs",
+    "prd",
+    "erd",
+    "dbml",
+    "project-management",
+    "design-system",
+    "korean"
+  ],
+  "license": "MIT",
+  "author": "Qualisoft",
+  "homepage": "https://github.com/qualisoft-service/project-ai-skills#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qualisoft-service/project-ai-skills.git"
+  },
+  "bugs": {
+    "url": "https://github.com/qualisoft-service/project-ai-skills/issues"
+  },
+  "type": "module",
+  "bin": {
+    "qualisoft-ai-skills": "bin/cli.mjs"
+  },
+  "exports": {
+    ".": "./bin/cli.mjs",
+    "./skills/*": "./skills/*"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node bin/cli.mjs list > /dev/null && node skills/project-init/build.mjs selftest"
+  }
+}

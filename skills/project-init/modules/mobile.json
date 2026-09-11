@@ -1,0 +1,22 @@
+{
+  "name": "mobile",
+  "label": "모바일 앱 — 권한 · 스토어",
+  "docs": [
+    {
+      "name": "permissions-privacy",
+      "template": "spec",
+      "phase": "20. 설계",
+      "title": "권한 · 개인정보",
+      "summary": "요청 권한과 사유, 수집 항목, 스토어 고지 대응.",
+      "minRisk": "standard"
+    },
+    {
+      "name": "release-store",
+      "template": "spec",
+      "phase": "50. 오픈 · 안정화",
+      "title": "배포 · 스토어 심사",
+      "summary": "빌드 채널, 심사 준비물, 단계적 배포, 롤백.",
+      "minDelivery": "production"
+    }
+  ]
+}

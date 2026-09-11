@@ -1,0 +1,43 @@
+// 회귀용 익명 샘플 ② — 깨지기 쉬운 것만 모았다.
+//   · 자기참조 · 그룹이 하나뿐인 경우 · 그룹에 안 들어간 테이블
+//   · 아주 긴 이름(자르기) · 관계가 하나도 없는 고립 테이블
+//   · 정의 없는 참조 대상(스텁) · 이름에 특수문자
+
+Table a_very_long_table_name_that_will_not_fit_in_a_card {
+  id uniqueidentifier [pk, not null, note: '기본 키']
+  parent_id uniqueidentifier [note: '자기참조 → a_very_long_table_name_that_will_not_fit_in_a_card']
+  Note: '아주 긴 이름을 가진 테이블이라 카드 폭에 절대 안 들어간다 (LongName) · 커스텀 · 총 속성 12개 · 표시 2개'
+}
+
+Table lonely {
+  lonely_id uniqueidentifier [pk, not null, note: '기본 키']
+  Note: '고립 테이블 — 관계가 하나도 없다 (Lonely) · 표준 · 총 속성 1개 · 표시 1개'
+}
+
+Table quoted_note {
+  id uniqueidentifier [pk, not null, note: '따옴표 \'테스트\' 포함']
+  target_id uniqueidentifier [note: '스텁 → ghost_table']
+  Note: '노트에 따옴표가 있는 테이블 (Quoted) · 표준 · 총 속성 2개 · 표시 2개'
+}
+
+Table ghost_table {
+  ghost_tableid uniqueidentifier [pk, note: '기본 키 (추정 — 문서에 없음)']
+  Note: '문서 밖 엔티티 · 이 문서에 정의 없음 · 피참조 1건'
+}
+
+Table ungrouped {
+  ungrouped_id uniqueidentifier [pk, not null, note: '기본 키']
+  long_ref uniqueidentifier [note: '긴 이름 → a_very_long_table_name_that_will_not_fit_in_a_card']
+  Note: '그룹에 안 들어간 테이블 (Ungrouped) · 표준 · 총 속성 2개 · 표시 2개'
+}
+
+TableGroup "유일한 그룹" {
+  a_very_long_table_name_that_will_not_fit_in_a_card
+  lonely
+  quoted_note
+  ghost_table
+}
+
+Ref: a_very_long_table_name_that_will_not_fit_in_a_card.parent_id > a_very_long_table_name_that_will_not_fit_in_a_card.id
+Ref: quoted_note.target_id > ghost_table.ghost_tableid
+Ref: ungrouped.long_ref > a_very_long_table_name_that_will_not_fit_in_a_card.id
