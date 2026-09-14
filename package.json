@@ -1,6 +1,6 @@
 {
   "name": "@qualisoft/ai-skills",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "기획 인터뷰부터 문서 체계·디자인 시안·구현까지 이어지는 AI 에이전트 스킬 5종. Claude Code · Codex · Gemini 등 어느 도구에서나 쓴다. 외부 의존성 없음.",
   "keywords": [
     "ai-skills",

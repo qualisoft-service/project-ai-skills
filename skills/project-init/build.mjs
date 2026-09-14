@@ -29,6 +29,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -167,6 +168,193 @@ function loadMockups(docsDir) {
     .sort()
     .map((f) => ({ file: f, href: DESIGN_DIR + "/" + MOCKUP_DIR + "/" + f }));
 }
+
+/* ================================================================== *
+ * 연동 서비스
+ *
+ * 문서 바깥에 있는 것들(저장소·API 문서·협업 도구)이 어디에 붙어 있는지
+ * 한곳에서 본다. 목록이 어디서 오는지는 네 갈래다. **아래일수록 약하다.**
+ *
+ *   1. 설정   `docs.config.json.integrations` — 사람이 적은 것. 언제나 이긴다
+ *   2. 자동   깃 리모트 · 스펙 파일 — 빌드가 직접 본다
+ *   3. 기획   문서 본문에서 잡은 **연동 예정** — 기획에 적혀 있으면 목록에 오른다
+ *   4. 추천   1~3 이 **하나도 없을 때만** 카탈로그 기본값으로 채운다
+ *
+ * 3번이 이 체계의 요점이다. 연동은 기획에서 먼저 정해지고 나중에 붙는다.
+ * 기획서에 "GCP 에 배포한다"고 적어 두었으면 그건 이미 연동 예정이다 —
+ * 사람이 설정 파일에 한 번 더 적게 만들 이유가 없다.
+ * ================================================================== */
+
+/**
+ * `detect` 는 문서 본문에서 찾을 표기다. 서비스 이름이 본문에 있으면 연동 예정으로 본다.
+ * `recommend` 는 아무것도 못 잡았을 때 보여줄 기본 후보다.
+ * 카탈로그에 없는 서비스도 설정에 적으면 그대로 나온다.
+ */
+const LINK_CATALOG = [
+  { id: "github", name: "GitHub", slug: "github", color: "181717", what: "코드 저장소 · 이슈 · PR",
+    recommend: true, detect: ["github", "깃허브"] },
+  { id: "swagger", name: "Swagger", slug: "swagger", color: "85EA2D", what: "API 스펙 · 문서",
+    recommend: true, detect: ["swagger", "openapi", "스웨거"] },
+  { id: "notion", name: "Notion", slug: "notion", color: "000000", what: "회의록 · 업무 위키",
+    recommend: true, detect: ["notion", "노션"] },
+  { id: "figma", name: "Figma", slug: "figma", color: "F24E1E", what: "디자인 원본 · 시안",
+    recommend: true, detect: ["figma", "피그마"] },
+  { id: "slack", name: "Slack", slug: "slack", color: "4A154B", what: "알림 · 커뮤니케이션",
+    recommend: true, detect: ["slack", "슬랙"] },
+  { id: "jira", name: "Jira", slug: "jira", color: "0052CC", what: "이슈 · 스프린트",
+    recommend: true, detect: ["jira", "지라"] },
+
+  /* 아래는 추천 기본값이 아니다 — 기획에 적혀 있을 때만 올라온다 */
+  { id: "gcp", name: "Google Cloud", slug: "googlecloud", color: "4285F4", what: "배포 · 호스팅",
+    detect: ["gcp", "google cloud", "구글 클라우드", "cloud run", "app engine"] },
+  { id: "aws", name: "AWS", slug: "amazonwebservices", color: "232F3E", what: "배포 · 호스팅",
+    detect: ["aws", "amazon web services", "ec2", "s3 버킷"] },
+  { id: "vercel", name: "Vercel", slug: "vercel", color: "000000", what: "배포 · 호스팅",
+    detect: ["vercel", "버셀"] },
+  { id: "cloudflare", name: "Cloudflare", slug: "cloudflare", color: "F38020", what: "CDN · DNS",
+    detect: ["cloudflare", "클라우드플레어"] },
+  { id: "ga4", name: "Google Analytics", slug: "googleanalytics", color: "E37400", what: "측정 · 전환 추적",
+    detect: ["ga4", "google analytics", "구글 애널리틱스"] },
+  { id: "gtm", name: "Google Tag Manager", slug: "googletagmanager", color: "246FDB", what: "태그 운영",
+    detect: ["gtm", "google tag manager", "태그매니저", "태그 매니저"] },
+  { id: "sentry", name: "Sentry", slug: "sentry", color: "362D59", what: "에러 추적",
+    detect: ["sentry", "센트리"] },
+  { id: "kakao", name: "카카오", slug: "kakaotalk", color: "FFCD00", what: "채널 · 알림톡",
+    detect: ["카카오", "알림톡", "kakao"] },
+  { id: "naver", name: "네이버", slug: "naver", color: "03C75A", what: "검색 등록 · 서치어드바이저",
+    detect: ["서치어드바이저", "네이버 웹마스터", "naver search advisor"] },
+  { id: "stripe", name: "Stripe", slug: "stripe", color: "635BFF", what: "결제",
+    detect: ["stripe", "스트라이프"] },
+  { id: "tosspayments", name: "토스페이먼츠", slug: "tosspayments", color: "0064FF", what: "결제",
+    detect: ["토스페이먼츠", "tosspayments", "toss payments"] },
+  { id: "firebase", name: "Firebase", slug: "firebase", color: "DD2C00", what: "인증 · 실시간 DB",
+    detect: ["firebase", "파이어베이스"] },
+  { id: "supabase", name: "Supabase", slug: "supabase", color: "3FCF8E", what: "DB · 인증",
+    detect: ["supabase", "수파베이스"] },
+  { id: "sendgrid", name: "SendGrid", slug: "sendgrid", color: "1A82E2", what: "메일 발송",
+    detect: ["sendgrid", "센드그리드"] },
+  { id: "githubactions", name: "GitHub Actions", slug: "githubactions", color: "2088FF", what: "CI · CD",
+    detect: ["github actions", "깃허브 액션", "ci/cd"] },
+];
+
+/** git@host:a/b.git → https://host/a/b */
+function normalizeRemote(url) {
+  const ssh = url.match(/^git@([^:]+):(.+?)(\.git)?$/);
+  if (ssh) return "https://" + ssh[1] + "/" + ssh[2];
+  return url.replace(/\.git$/, "");
+}
+
+/** 프로젝트 루트에서 알아낼 수 있는 연동만 자동으로 집는다. */
+function detectLinks(docsDir) {
+  const root = dirname(resolve(docsDir));
+  const found = {};
+
+  try {
+    const remote = execFileSync("git", ["-C", root, "remote", "get-url", "origin"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (/github\.com/.test(remote)) found.github = { url: normalizeRemote(remote), note: "git origin" };
+  } catch {}
+
+  const specDirs = ["", "docs", "api", "openapi"];
+  for (const d of specDirs) {
+    const dir = d ? join(root, d) : root;
+    if (!existsSync(dir)) continue;
+    const hit = readdirSync(dir).find((f) => /^(openapi|swagger)\.(ya?ml|json)$/i.test(f));
+    if (hit) {
+      found.swagger = { url: (d ? "../" + d + "/" : "../") + hit, note: "스펙 파일 " + (d ? d + "/" : "") + hit };
+      break;
+    }
+  }
+  return found;
+}
+
+/**
+ * 기획 문서 본문에서 **연동 예정**을 잡는다.
+ *
+ * 연동은 설정 파일보다 기획서에 먼저 적힌다 — "GCP 에 배포한다", "카카오 알림톡을 쓴다".
+ * 그걸 사람이 설정에 한 번 더 옮겨 적게 만들 이유가 없으므로 본문에서 직접 읽는다.
+ * 근거(어느 문서에서 잡았는지)를 함께 돌려주어 오탐을 눈으로 판단할 수 있게 한다.
+ */
+function detectPlannedLinks(docs) {
+  const found = {};
+  for (const c of LINK_CATALOG) {
+    if (!c.detect || !c.detect.length) continue;
+    for (const d of docs) {
+      const body = authoredText(d.body || "");
+      const hit = c.detect.find((k) => body.includes(k.toLowerCase()));
+      if (!hit) continue;
+      const title = (d.meta && d.meta.title) || d.id;
+      found[c.id] = { planned: true, note: "기획에 언급됨 — " + title };
+      break;
+    }
+  }
+  return found;
+}
+
+/**
+ * 사람이 **쓴** 본문만 남긴다.
+ *
+ * 빼는 것 세 가지. 전부 실제로 오탐을 냈다.
+ *   - `> **작성 지침**` — 템플릿 지침에 서비스 이름이 예시로 들어 있다.
+ *     같이 읽으면 **빈 새 프로젝트에서도 연동이 잡힌다**
+ *   - 코드 블록 — 설정 예시에 서비스 id 가 들어 있다
+ *   - 인라인 코드 — `openapi` 처럼 **식별자**를 가리키는 표기다.
+ *     "openapi 파일을 찾는다"는 설명이지 "openapi 를 쓴다"가 아니다
+ *
+ * 지침과 식별자는 "이런 걸 적어라"이지 "이걸 쓴다"가 아니다.
+ */
+function authoredText(body) {
+  return body
+    .replace(/```[\s\S]*?```/g, "")
+    .split("\n")
+    .filter((line) => !/^\s*>/.test(line))
+    .join("\n")
+    .replace(/`[^`\n]*`/g, "")
+    .toLowerCase();
+}
+
+/**
+ * 설정 + 자동 감지 + 기획 감지를 합친다. **설정이 항상 이긴다.**
+ * 셋 다 비면 카탈로그의 추천 기본값으로 채운다 — 빈 페이지를 보여주지 않기 위해서다.
+ * 카탈로그에 없는 id도 설정에 적으면 그대로 나온다(name 은 직접 적는다).
+ */
+function loadLinks(docsDir, config, docs = []) {
+  const conf = config.integrations || {};
+  const auto = detectLinks(docsDir);
+  const planned = detectPlannedLinks(docs);
+
+  let ids = [...new Set([...Object.keys(conf), ...Object.keys(auto), ...Object.keys(planned)])];
+  const recommended = ids.length === 0;
+  if (recommended) ids = LINK_CATALOG.filter((c) => c.recommend).map((c) => c.id);
+
+  return ids.map((id) => {
+    const base = LINK_CATALOG.find((c) => c.id === id) || { id, name: id, slug: id, color: "6b7280", what: "" };
+    const c = typeof conf[id] === "string" ? { url: conf[id] } : conf[id] || {};
+    const merged = { ...base, ...(planned[id] || {}), ...(auto[id] || {}), ...c };
+    merged.source = conf[id] ? "설정" : auto[id] ? "자동 감지" : planned[id] ? "기획" : "추천";
+    merged.connected = merged.status ? merged.status === "connected" : Boolean(merged.url);
+    merged.prompt = merged.connected
+      ? merged.name + " 연동(" + (merged.url || "") + ")이 지금 제대로 물려 있는지 점검해줘. " +
+        "끊겼거나 갱신이 필요한 부분을 알려주고, 바뀐 내용은 Docs/docs.config.json 의 integrations." + id +
+        " 에 반영한 뒤 project-init build 를 다시 돌려줘."
+      : "이 프로젝트를 " + merged.name + (merged.what ? "(" + merged.what + ")" : "") + "에 연동하고 싶어. " +
+        "지금 프로젝트 상태와 이미 붙어 있는 연동을 먼저 확인하고, " + merged.name +
+        " 연동에 필요한 준비물과 단계를 순서대로 알려줘. 연동이 끝나면 Docs/docs.config.json 의 integrations." + id +
+        ' 에 url 과 status:"connected" 를 기록하고 project-init build 를 다시 돌려서 문서에 반영해줘.';
+    return merged;
+  });
+}
+
+const LINK_ADD_PROMPT =
+  "연동하고 싶은 서비스가 하나 더 있어: (서비스 이름). 이 프로젝트에 어떻게 붙이면 되는지 알려주고, " +
+  "Docs/docs.config.json 의 integrations 에 항목을 추가한 뒤 project-init build 를 다시 돌려줘.";
+
+/** 로고 타일. CDN이 막힌 환경에서는 이니셜로 떨어진다. */
+const linkLogo = (l) =>
+  '<span class="logo" style="--brand:#' + l.color + '"><i>' + escapeHtml(l.name.charAt(0)) + "</i>" +
+  '<img src="https://cdn.simpleicons.org/' + l.slug + "/" + l.color + '" alt="" loading="lazy" onerror="this.remove()"></span>';
 
 /* ================================================================== *
  * 3단계 — 시안 스냅샷과 규칙 검증
@@ -891,7 +1079,7 @@ function progressClass(percent) {
  * 렌더
  * ================================================================== */
 
-function render(docs, config, trace, discovery = [], design = [], mockups = [], styleguide = null, docsDir = "", build = []) {
+function render(docs, config, trace, discovery = [], design = [], mockups = [], styleguide = null, docsDir = "", build = [], links = []) {
   const byId = new Map([...discovery, ...design, ...docs].map((d) => [d.id, d]));
   const resolveLink = (target) => {
     const d = byId.get(target);
@@ -1006,7 +1194,89 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
     stageTitle(4, "구현") + '<div class="nav-empty">' +
     (progress[4] ? "구현 진행 중" : "아직 산출물 없음") + "</div></div>";
 
-  /* --- 문서 본문 (1단계 기록 + 2단계 문서) --- */
+
+  /* --- 연동 서비스 --- */
+  /* 좌측에는 **관리 메뉴 하나만** 둔다.
+     서비스를 전부 나열하면 문서 메뉴보다 길어져 사이드바가 연동 목록판이 된다.
+     목록은 연동 서비스 페이지가 맡는다. 여기서는 몇 개가 붙었는지만 보여준다. */
+  const linkedCount = links.filter((l) => l.connected).length;
+  const linksNav =
+    '<div class="nav-group nav-links">' +
+    '<a class="nav-item" data-id="__links" href="#/__links">' +
+    '<span class="nav-dot s-utility"></span><span>연동 서비스 관리</span><span class="nav-progress ' +
+    progressClass(links.length ? Math.round((linkedCount / links.length) * 100) : 0) + '">' +
+    linkedCount + "/" + links.length + "</span></a>" +
+    "</div>";
+
+  const SRC_PILL = { "설정": "s-approved", "자동 감지": "s-review", "기획": "s-review", "추천": "s-draft" };
+  const linkCard = (l) =>
+    '<div class="link-card' + (l.connected ? " on" : "") + '">' +
+    '<div class="link-head">' + linkLogo(l) +
+    '<span class="link-name">' + escapeHtml(l.name) + "</span>" +
+    '<span class="pill ' + (SRC_PILL[l.source] || "s-draft") + '">' + escapeHtml(l.source || "") + "</span>" +
+    '<span class="pill ' + (l.connected ? "s-approved" : "s-draft") + '">' +
+    (l.connected ? "연결됨" : "미연동") + "</span></div>" +
+    '<p class="card-summary">' + escapeHtml(l.what || "") +
+    (l.note ? " — " + escapeHtml(l.note) : "") + "</p>" +
+    (l.url ? '<div class="link-url">' + escapeHtml(l.url) + "</div>" : "") +
+    '<div class="link-actions">' +
+    (l.connected && l.url
+      ? '<a class="link-btn primary" href="' + escapeHtml(l.url) + '" target="_blank" rel="noreferrer">열기 ↗</a>'
+      : "") +
+    '<button class="link-btn" type="button" data-copy="' + escapeHtml(l.prompt) + '">' +
+    (l.connected ? "점검 요청 복사" : "연동 방법 묻기 복사") + "</button></div></div>";
+
+  const linksArticle =
+    '<article class="doc" data-id="__links" data-title="연동 서비스"><div class="doc-inner"><div class="doc-body">' +
+    "<h1>연동 서비스</h1>" +
+    '<p class="home-lead">이 프로젝트가 밖으로 물려 있는 곳들입니다. ' +
+    "연결된 카드는 눌러서 바로 이동하고, 아직 안 붙은 카드는 <strong>연동 방법 묻기</strong>를 눌러 " +
+    "문구를 복사한 뒤 AI에게 그대로 물어보면 됩니다.</p>" +
+    (links.every((l) => l.source === "추천")
+      ? '<p class="home-lead links-hint"><strong>아직 정해진 연동이 없어 추천 목록을 보여줍니다.</strong> ' +
+        "기획 문서에 쓸 서비스를 적으면(예: “GCP 에 배포한다”) 다음 빌드부터 이 자리에 그것이 올라옵니다. " +
+        "확정된 것은 <code>Docs/docs.config.json</code> 의 <code>integrations</code> 에 적습니다.</p>"
+      : '<p class="home-lead links-hint">목록은 <strong>설정 → 자동 감지 → 기획 본문</strong> 순으로 모읍니다. ' +
+        "<code>기획</code> 딱지가 붙은 카드는 문서에 언급되어 자동으로 올라온 것이라 " +
+        "오탐일 수 있습니다 — 아니면 <code>integrations</code> 에서 빼면 됩니다.</p>") +
+    '<div class="links-grid">' +
+    links.map(linkCard).join("") +
+    '<div class="link-card link-add"><div class="link-head"><span class="logo logo-add"><i>+</i></span>' +
+    '<span class="link-name">새 서비스 추가</span></div>' +
+    '<p class="card-summary">카탈로그에 없는 서비스도 붙일 수 있습니다.</p>' +
+    '<div class="link-actions"><button class="link-btn" type="button" data-copy="' +
+    escapeHtml(LINK_ADD_PROMPT) + '">추가 문의 문구 복사</button></div></div>' +
+    "</div></div></div></article>";
+
+  /* 내보내기 스크립트 템플릿.
+ *
+ * 스크립트는 원본 .md 를 **실행할 때마다 다시 읽는다.** 내용을 스크립트에
+ * 박아 넣지 않으므로, 문서를 고친 뒤 같은 스크립트를 다시 돌리면 최신 내용이
+ * 나온다. HTML 크기도 문서 수와 무관하게 일정하다. */
+const EXPORT_FORMATS = [
+  { id: "pdf",   label: "PDF",              ext: "pdf",  install: "pip install reportlab" },
+  { id: "excel", label: "Excel (XLSX)",     ext: "xlsx", install: "pip install openpyxl" },
+  { id: "pptx",  label: "PowerPoint (PPTX)", ext: "pptx", install: "pip install python-pptx" },
+  { id: "docx",  label: "Word (DOCX)",      ext: "docx", install: "pip install python-docx" },
+  { id: "csv",   label: "CSV",              ext: "csv",  install: "" },
+];
+
+function loadExportScripts() {
+  const dir = join(SKILL_DIR, "templates", "export");
+  const parserPath = join(dir, "_parser.py");
+  if (!existsSync(parserPath)) return null;
+  const parser = readFileSync(parserPath, "utf8");
+  const out = {};
+  for (const f of EXPORT_FORMATS) {
+    const path = join(dir, f.id + ".py");
+    if (!existsSync(path)) continue;
+    out[f.id] = readFileSync(path, "utf8").replace("__PARSER__", parser);
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/* --- 문서 본문 (1단계 기록 + 2단계 문서) --- */
+  const exportScripts = loadExportScripts();
   const searchIndex = [];
   const articles = [...discovery, ...design, ...docs]
     .map((d) => {
@@ -1087,7 +1357,15 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
         escapeHtml(d.meta.updated || d.meta.date || "—") +
         '</span><span class="meta-sep"></span><span class="mono">' +
         escapeHtml(d.file) +
-        "</span></div>" +
+        "</span>" +
+        (stage1
+          ? ""
+          : '<button class="doc-export" type="button" data-export-file="' +
+            escapeHtml(d.file) +
+            '" data-export-title="' +
+            escapeHtml(d.meta.title || d.id) +
+            '">파일 스크립트</button>') +
+        "</div>" +
         html +
         definedHtml +
         backHtml +
@@ -1320,6 +1598,7 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
     '<div class="nav" id="nav">' +
     guideNav +
     navLink("__home", "홈", "home") +
+    linksNav +
     navLink("__trace", "추적성 매트릭스", "utility") +
     discoveryNav +
     sidebar +
@@ -1341,10 +1620,39 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
     '<div class="doc-body"><h1>검색</h1><div id="results"></div></div></div></article>' +
     guideArticle +
     home +
+    linksArticle +
     mockupArticle +
     traceArticle +
     articles +
     "</main>" +
+    (exportScripts
+      ? '<div class="modal" id="exportModal" hidden>' +
+        '<div class="modal-back" data-close-export></div>' +
+        '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportTitle">' +
+        '<div class="modal-head">' +
+        '<div><div class="modal-title" id="exportTitle">파일 스크립트</div>' +
+        '<div class="modal-sub" id="exportSub"></div></div>' +
+        '<button class="icon-btn" type="button" data-close-export aria-label="닫기">\u2715</button>' +
+        "</div>" +
+        '<div class="modal-bar">' +
+        '<label class="modal-label" for="exportFormat">형식</label>' +
+        '<select class="modal-select" id="exportFormat">' +
+        EXPORT_FORMATS.filter((f) => exportScripts[f.id])
+          .map((f) => '<option value="' + f.id + '">' + f.label + "</option>")
+          .join("") +
+        "</select>" +
+        '<span class="modal-install" id="exportInstall"></span>' +
+        '<button class="modal-copy" type="button" id="exportCopy">스크립트 복사</button>' +
+        "</div>" +
+        '<div class="modal-body"><pre class="modal-code" id="exportCode"></pre></div>' +
+        '<div class="modal-foot">원본 <span class="mono" id="exportFile"></span> 을 실행할 때마다 다시 읽습니다. ' +
+        "문서를 고친 뒤 같은 스크립트를 돌리면 최신 내용이 나옵니다." +
+        "</div></div></div>" +
+        '<script id="exportScripts" type="application/json">' +
+        JSON.stringify({ scripts: exportScripts, formats: EXPORT_FORMATS })
+          .replace(/</g, "\\u003c") +
+        "<\/script>"
+      : "") +
     '<script id="searchIndex" type="application/json">' +
     JSON.stringify(searchIndex).replace(/</g, "\\u003c") +
     "<\/script>" +
@@ -1379,6 +1687,52 @@ const CSS = `
   --accent:#529cca; --stage1:#9e77ed; --stage3:#4dab9a;
   --s-draft:#979a9b; --s-review:#d9730d; --s-approved:#4dab9a;
   --alert-bg:#2d1f1c; --alert-line:#5c332a; --alert-tx:#ff9b8a;
+}
+
+/* ── 파일 스크립트 버튼 · 모달 ─────────────────────────────── */
+.doc-export{margin-left:auto; font:inherit; font-size:12px; font-weight:500;
+  color:var(--tx-dim); background:transparent; border:1px solid var(--line-strong);
+  border-radius:6px; padding:3px 10px; cursor:pointer; white-space:nowrap;
+  transition:background .12s, color .12s, border-color .12s}
+.doc-export:hover{background:var(--hover); color:var(--tx); border-color:var(--tx-faint)}
+.modal[hidden]{display:none}
+.modal{position:fixed; inset:0; z-index:90; display:flex; align-items:center;
+  justify-content:center; padding:24px}
+.modal-back{position:absolute; inset:0; background:rgba(15,15,15,.45);
+  backdrop-filter:blur(2px); animation:mfade .16s var(--ease)}
+.modal-card{position:relative; display:flex; flex-direction:column;
+  width:min(880px,100%); max-height:min(86vh,760px); background:var(--bg);
+  border:1px solid var(--line-strong); border-radius:14px; overflow:hidden;
+  box-shadow:0 24px 64px rgba(15,15,15,.22); animation:mrise .2s var(--ease)}
+@keyframes mfade{from{opacity:0}}
+@keyframes mrise{from{opacity:0; transform:translateY(10px) scale(.985)}}
+.modal-head{display:flex; align-items:flex-start; gap:16px; padding:18px 20px 14px;
+  border-bottom:1px solid var(--line)}
+.modal-title{font-size:16px; font-weight:600; letter-spacing:-.01em}
+.modal-sub{font-size:12.5px; color:var(--tx-dim); margin-top:2px}
+.modal-head .icon-btn{margin-left:auto; flex:none}
+.modal-bar{display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:12px 20px; background:var(--bg-side); border-bottom:1px solid var(--line)}
+.modal-label{font-size:12px; color:var(--tx-dim); font-weight:500}
+.modal-select{font:inherit; font-size:13px; color:var(--tx); background:var(--bg);
+  border:1px solid var(--line-strong); border-radius:7px; padding:5px 10px; cursor:pointer}
+.modal-install{font-family:var(--mono,ui-monospace,SFMono-Regular,Menlo,monospace);
+  font-size:11.5px; color:var(--tx-dim); background:var(--bg-code);
+  border-radius:5px; padding:3px 8px}
+.modal-copy{margin-left:auto; font:inherit; font-size:12.5px; font-weight:600;
+  color:#fff; background:var(--accent); border:0; border-radius:7px;
+  padding:6px 14px; cursor:pointer}
+.modal-copy:hover{filter:brightness(1.06)}
+.modal-body{overflow:auto; background:var(--bg-code)}
+.modal-code{margin:0; padding:18px 20px; font-size:12px; line-height:1.65;
+  white-space:pre; color:var(--tx);
+  font-family:var(--mono,ui-monospace,SFMono-Regular,Menlo,monospace)}
+.modal-foot{padding:11px 20px; font-size:12px; color:var(--tx-dim);
+  border-top:1px solid var(--line)}
+@media(max-width:700px){
+  .modal{padding:10px}
+  .modal-copy{margin-left:0}
+  .modal-code{font-size:11px}
 }
 html{-webkit-text-size-adjust:100%}
 body{
@@ -1460,6 +1814,29 @@ a{color:inherit}
 .nav-group.nav-stage3{padding-bottom:12px; border-bottom:1px solid var(--line)}
 .panel-stage3{border-color:var(--stage3)}
 .panel-stage3 .panel-title{color:var(--stage3)}
+.logo{position:relative; width:18px; height:18px; flex:none; border-radius:4px; background:#fff;
+  border:1px solid var(--line-strong); overflow:hidden}
+.logo i{position:absolute; inset:0; display:grid; place-items:center; font-style:normal;
+  font-size:10px; font-weight:700; color:var(--brand,#555)}
+.logo img{position:relative; display:block; width:100%; height:100%; padding:3px; object-fit:contain}
+.logo-add i{color:var(--tx-faint); font-size:13px}
+.links-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:10px; margin-top:22px}
+.link-card{display:flex; flex-direction:column; gap:6px; padding:14px 16px;
+  border:1px solid var(--line-strong); border-radius:8px; background:var(--bg)}
+.link-card.on{border-color:var(--green)}
+.link-card.link-add{border-style:dashed}
+.link-head{display:flex; align-items:center; gap:8px}
+.link-head .logo{width:22px; height:22px}
+.link-name{font-weight:600; font-size:14px}
+.link-head .pill{margin-left:auto}
+.link-head .pill ~ .pill{margin-left:0}
+.link-url{font-size:11.5px; color:var(--tx-faint); word-break:break-all}
+.link-actions{display:flex; gap:6px; margin-top:auto; padding-top:6px}
+.link-btn{display:inline-flex; align-items:center; justify-content:center; padding:5px 10px;
+  border:1px solid var(--line-strong); border-radius:6px; background:transparent; cursor:pointer;
+  font:inherit; font-size:12px; color:var(--tx-dim); text-decoration:none; white-space:nowrap}
+.link-btn:hover{background:var(--hover); color:var(--tx)}
+.link-btn.primary{border-color:var(--accent); color:var(--accent)}
 .mockups{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px; margin-top:20px}
 .mockup{display:flex; align-items:center; justify-content:space-between; gap:10px;
   padding:14px 16px; border:1px solid var(--line-strong); border-radius:8px;
@@ -1643,6 +2020,7 @@ a.panel-row:hover{color:var(--tx)}
   .doc-body h1{font-size:30px}
   .doc-body h2{font-size:21px}
   .cards{grid-template-columns:1fr}
+  .links-grid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){ *{transition-duration:.01ms !important; animation-duration:.01ms !important} }
 `;
@@ -1707,6 +2085,115 @@ const JS = `
     if(href.indexOf('#/') === 0) return;
     var el = document.getElementById(href.slice(1));
     if(el){ e.preventDefault(); el.scrollIntoView({behavior:'smooth', block:'start'}); }
+  });
+
+
+  /* ── 파일 스크립트 모달 ──────────────────────────── */
+  (function(){
+    var node = document.getElementById('exportScripts');
+    var modal = document.getElementById('exportModal');
+    if(!node || !modal) return;
+    var data = JSON.parse(node.textContent);
+    var sel = document.getElementById('exportFormat');
+    var code = document.getElementById('exportCode');
+    var install = document.getElementById('exportInstall');
+    var sub = document.getElementById('exportSub');
+    var fileEl = document.getElementById('exportFile');
+    var copyBtn = document.getElementById('exportCopy');
+    var cur = { file: '', title: '' };
+    var lastFocus = null;
+
+    function fmt(id){
+      for(var i=0;i<data.formats.length;i++){ if(data.formats[i].id===id) return data.formats[i]; }
+      return data.formats[0];
+    }
+    function stem(file){ return file.replace(/\.[^.]+$/, ''); }
+
+    function render(){
+      var f = fmt(sel.value);
+      var src = data.scripts[f.id] || '';
+      code.textContent = src
+        .split('__DOC_FILE__').join(cur.file)
+        .split('__DOC_TITLE__').join(cur.title)
+        .split('__DOC_STEM__').join(stem(cur.file));
+      install.textContent = f.install || '설치할 것 없음 — 표준 라이브러리';
+      try { localStorage.setItem('exportFormat', f.id); } catch(e){}
+    }
+
+    function open(btn){
+      cur.file = btn.getAttribute('data-export-file') || '';
+      cur.title = btn.getAttribute('data-export-title') || '';
+      sub.textContent = cur.title;
+      fileEl.textContent = cur.file;
+      try {
+        var saved = localStorage.getItem('exportFormat');
+        if(saved && data.scripts[saved]) sel.value = saved;
+      } catch(e){}
+      render();
+      lastFocus = btn;
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+      sel.focus();
+    }
+    function close(){
+      modal.hidden = true;
+      document.body.style.overflow = '';
+      if(lastFocus) lastFocus.focus();
+    }
+
+    document.addEventListener('click', function(e){
+      var btn = e.target.closest && e.target.closest('[data-export-file]');
+      if(btn){ e.preventDefault(); open(btn); return; }
+      if(e.target.closest && e.target.closest('[data-close-export]')) close();
+    });
+    document.addEventListener('keydown', function(e){
+      if(e.key === 'Escape' && !modal.hidden) close();
+    });
+    sel.addEventListener('change', render);
+
+    copyBtn.addEventListener('click', function(){
+      var text = code.textContent;
+      var label = copyBtn.textContent;
+      function done(){
+        copyBtn.textContent = '복사됨 ✓';
+        setTimeout(function(){ copyBtn.textContent = label; }, 1600);
+      }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly','');
+        ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); }
+        catch(err){ copyBtn.textContent = '복사 실패'; }
+        ta.remove();
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+    });
+  })();
+
+  /* ── 연동 카드: 문구 복사 ──────────────────────── */
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-copy]');
+    if(!b) return;
+    var text = b.getAttribute('data-copy');
+    var label = b.textContent;
+    function done(){
+      b.textContent = '복사됨 ✓';
+      setTimeout(function(){ b.textContent = label; }, 1600);
+    }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly','');
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(err) { b.textContent = '복사 실패'; }
+      ta.remove();
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else { fallback(); }
   });
 
   /* ── 전문 검색 ───────────────────────────────────── */
@@ -2034,9 +2521,10 @@ function cmdBuild(docsDir) {
   const config = loadConfig(docsDir);
   const mockups = loadMockups(docsDir);
   const styleguide = findStyleguide(docsDir);
+  const links = loadLinks(docsDir, config, docs);
   const trace = buildTraceability([...discovery, ...design, ...docs]);
   const out = join(docsDir, "index.html");
-  writeFileSync(out, render(docs, config, trace, discovery, design, mockups, styleguide, docsDir, build), "utf8");
+  writeFileSync(out, render(docs, config, trace, discovery, design, mockups, styleguide, docsDir, build, links), "utf8");
   console.log(
     "생성됨: " +
       out +
