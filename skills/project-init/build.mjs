@@ -1889,15 +1889,21 @@ const CSS = `
   background:#000; box-shadow:0 0 0 1px rgba(255,255,255,.22)}
 .nav-item.unused .nav-label{color:var(--tx-faint)}
 .nav-item.unused:hover .nav-label{color:var(--tx-dim)}
-/* 관리 모드 */
-body.inactive-mode .nav-item{position:relative; padding-left:30px}
-body.inactive-mode .nav-item .nav-dot{position:absolute; left:18px}
-.nav-check{position:absolute; left:7px; top:50%; transform:translateY(-50%);
-  width:12px; height:12px; margin:0; cursor:pointer; accent-color:var(--accent);
-  display:none}
+/* 관리 모드
+ *
+ * 체크박스를 절대 배치하면 상태 점과 겹친다(7~19 vs 18~23). 행은 이미
+ * flex + gap 이므로 흐름 안에 두면 간격이 저절로 맞는다. */
+.nav-check{display:none; flex:none; width:13px; height:13px; margin:0;
+  cursor:pointer; accent-color:var(--accent)}
 body.inactive-mode .nav-check{display:block}
+/* 체크박스가 없는 행(홈·가이드·추적성)도 왼쪽을 맞춘다.
+ * 8 + 13 + 8 = 29 — 체크박스가 차지하는 폭만큼 밀어 준다. */
+body.inactive-mode .nav-item{padding-left:29px}
+body.inactive-mode .nav-item.has-check{padding-left:8px}
+body.inactive-mode .nav-item:hover{background:var(--hover)}
 body.inactive-mode .nav-tools{background:var(--hover); border-radius:7px;
-  margin:0 6px 6px; padding:6px 8px}
+  margin:0 6px 8px; padding:7px 9px}
+body.inactive-mode .nav-toggle{color:var(--tx)}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0; background:var(--bg); color:var(--tx);
@@ -2300,6 +2306,7 @@ const JS = `
       cb.className = 'nav-check';
       cb.title = '비활성으로 표시';
       item.insertBefore(cb, item.firstChild);
+      item.classList.add('has-check');
     });
 
     /* 체크박스가 <a> 안에 있어 클릭이 그대로 두면 문서 이동까지 간다.
