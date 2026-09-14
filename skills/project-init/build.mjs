@@ -1298,8 +1298,13 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
   /* 산출물 대본.
  *
  * 코드가 아니라 **AI 에게 주는 지시문**이다. 복사해서 에이전트에 붙여 넣으면
- * 그 형식으로 산출물을 만든다. 서식 규격(`_style.md`)이 대본 안에 박혀 있으므로
- * 착수 때 만들든 중간에 만들든, 누가 어떤 도구로 만들든 같은 모양이 나온다.
+ * 그 형식으로 산출물을 만든다.
+ *
+ * 대본은 네 겹으로 쌓인다:
+ *   _shape   문서 종류별 구성 — 이 문서는 무엇을 앞에 세워야 하는가
+ *   _purpose 목적 블록 — 받는 사람이 첫 화면에서 무엇을 알아야 하는가
+ *   _scope   고객 송부용 정제 — 무엇을 빼는가
+ *   _style   시각 규격 — 색·글자·표. 값이 고정이라 매번 같은 모양이 나온다
  *
  * 대본은 원본 .md 경로만 가리킨다. 내용을 품지 않으므로 문서를 고친 뒤 같은
  * 대본을 다시 쓰면 최신 내용으로 만들어진다. HTML 크기도 문서 수와 무관하다. */
@@ -1311,21 +1316,86 @@ const SCRIPT_FORMATS = [
   { id: "csv",   label: "CSV",               ext: "csv" },
 ];
 
+/* 문서 종류별 구성 지침.
+ *
+ * 같은 서식이어도 산출물의 뼈대는 문서마다 다르다. 일정표는 기간이 보여야 하고
+ * 요구사항 대장은 무엇이 어디로 이어지는지가 보여야 한다. 이 지침이 없으면
+ * "원본 순서대로 옮긴 파일"이 나오고, 받는 사람은 무엇을 보라는 것인지 모른다.
+ *
+ * 키는 문서 name(모듈에 적힌 것)이다. 없으면 기본 지침을 쓴다. */
+const DOC_SHAPE = {
+  "deliverable-register":
+    "이 문서는 **납품 목록**입니다. 공정별로 묶고, 각 산출물의 `필수 여부`·" +
+    "`고객 공유`·`상태`가 한눈에 보이게 하세요. 맨 앞 수치는 `전체 종수`, " +
+    "`필수`, `작성 완료`, `미착수` 입니다. **제외한 산출물** 목록을 빠뜨리지 " +
+    "마세요 — 고객이 '이건 왜 없냐'고 묻는 지점입니다. 버전 이력은 맨 뒤에 둡니다.",
+  "wbs-schedule":
+    "이 문서는 **일정표**입니다. 공정 → 과업 2단으로 묶고, 각 과업의 시작·종료·" +
+    "담당·진척이 한 행에 보이게 하세요. 맨 앞 수치는 `전체 과업`, `종합 진척률`, " +
+    "`진행 중`, `지연` 입니다. **마일스톤은 본표와 분리해 따로 세우세요** — " +
+    "고객이 가장 먼저 보는 것이 보고·승인 시점입니다. 지연 과업은 굵게 표시합니다.",
+  requirements:
+    "이 문서는 **요구사항 추적표**입니다. 각 요구사항이 `어느 과업`으로 가고 " +
+    "`어느 산출물`로 확인되는지가 같은 행에 보여야 합니다. 맨 앞 수치는 " +
+    "`전체 요구사항`, `수용`, `추가 검토`, `미수용` 입니다. 부서별로 묶으면 " +
+    "현업이 자기 것을 찾기 쉽습니다. **수용하지 않은 요구사항과 그 이유**를 " +
+    "반드시 포함하세요.",
+  "project-brief":
+    "이 문서는 **사업 개요**입니다. 목표와 범위가 먼저이고, 특히 `범위 제외`를 " +
+    "분명히 세우세요. 맨 앞 수치는 `목표 수`, `기간`, `이해관계자 수` 입니다. " +
+    "이해관계자는 이름과 역할만 남기고 연락처는 뺍니다.",
+  "screen-spec":
+    "이 문서는 **화면 설계서**입니다. 화면 목록을 먼저 보여주고, 그 뒤에 화면별 " +
+    "상세를 둡니다. 맨 앞 수치는 `전체 화면 수`와 구분별 개수입니다. " +
+    "화면마다 **무엇을 하는 화면인지 한 줄**을 앞에 붙이세요.",
+  "data-model":
+    "이 문서는 **데이터 구조**입니다. 테이블 목록을 먼저, 그 뒤 테이블별 칼럼. " +
+    "맨 앞 수치는 `테이블 수`, `관계 수` 입니다. 고객이 읽을 것이므로 " +
+    "**한글 논리명을 물리명보다 앞에** 두세요.",
+  "qa-test-plan":
+    "이 문서는 **검증 계획**입니다. 무엇을 어떤 기준으로 통과시키는지가 핵심입니다. " +
+    "맨 앞 수치는 `시나리오 수`, `필수 통과 항목`, `일정` 입니다. " +
+    "고객이 직접 하는 확인(UAT)과 우리가 하는 확인을 **구분해서** 세우세요.",
+  "release-ops":
+    "이 문서는 **오픈·운영 안내**입니다. 오픈 절차와 이후 지원 체계가 핵심입니다. " +
+    "맨 앞 수치는 `오픈 예정일`, `교육 대상 인원`, `지원 기간` 입니다. " +
+    "고객이 해야 할 준비를 따로 묶어 세우세요.",
+};
+
+const DOC_SHAPE_DEFAULT =
+  "원본의 절 구성을 따르되, **결론과 전체 그림을 앞으로 올리세요.** " +
+  "표가 여러 개면 가장 중요한 것 하나를 먼저 세우고 나머지를 뒤로 보냅니다. " +
+  "무엇이 가장 중요한지 판단이 안 서면, 행 수가 가장 많은 표가 보통 본표입니다.";
+
 function loadScripts(project) {
   const dir = join(SKILL_DIR, "templates", "script");
-  const stylePath = join(dir, "_style.md");
-  if (!existsSync(stylePath)) return null;
-  const style = readFileSync(stylePath, "utf8").trim();
+  const part = (name) => {
+    const path = join(dir, name + ".md");
+    return existsSync(path) ? readFileSync(path, "utf8").trim() : "";
+  };
+  const style = part("_style");
+  if (!style) return null;
+  const purpose = part("_purpose");
+  const scope = part("_scope");
   const out = {};
   for (const f of SCRIPT_FORMATS) {
     const path = join(dir, f.id + ".md");
     if (!existsSync(path)) continue;
     out[f.id] = readFileSync(path, "utf8")
       .replace("__STYLE__", style)
+      .replace("__PURPOSE__", purpose)
+      .replace("__SCOPE__", scope)
       .split("__PROJECT__").join(project || "이");
   }
   return Object.keys(out).length ? out : null;
 }
+
+/** 문서 id(`07-screen-spec`)에서 구성 지침을 찾는다. */
+function docShape(id = "") {
+  const name = id.replace(/^\d+-/, "");
+  return "## 이 문서의 구성\n\n" + (DOC_SHAPE[name] || DOC_SHAPE_DEFAULT);
+}
+
 
 /* --- 문서 본문 (1단계 기록 + 2단계 문서) --- */
   const scripts = loadScripts(config.project);
@@ -1416,6 +1486,8 @@ function loadScripts(project) {
             escapeHtml(d.file) +
             '" data-export-title="' +
             escapeHtml(d.meta.title || d.id) +
+            '" data-export-id="' +
+            escapeHtml(d.id) +
             '">파일 스크립트</button>') +
         "</div>" +
         html +
@@ -1707,7 +1779,11 @@ function loadScripts(project) {
         "문서를 고친 뒤 같은 대본을 다시 써도 최신 내용으로 만들어집니다." +
         "</div></div></div>" +
         '<script id="exportScripts" type="application/json">' +
-        JSON.stringify({ scripts: scripts, formats: SCRIPT_FORMATS })
+        JSON.stringify({
+          scripts: scripts,
+          formats: SCRIPT_FORMATS,
+          shapes: Object.fromEntries(docs.map((d) => [d.id, docShape(d.id)])),
+        })
           .replace(/</g, "\\u003c") +
         "<\/script>"
       : "") +
@@ -2285,6 +2361,7 @@ const JS = `
       var f = fmt(sel.value);
       var src = data.scripts[f.id] || '';
       code.textContent = src
+        .split('__SHAPE__').join((data.shapes && data.shapes[cur.id]) || '')
         .split('__DOC_FILE__').join(cur.file)
         .split('__DOC_TITLE__').join(cur.title)
         .split('__DOC_STEM__').join(stem(cur.file));
@@ -2295,6 +2372,7 @@ const JS = `
     function open(btn){
       cur.file = btn.getAttribute('data-export-file') || '';
       cur.title = btn.getAttribute('data-export-title') || '';
+      cur.id = btn.getAttribute('data-export-id') || '';
       sub.textContent = cur.title;
       fileEl.textContent = cur.file;
       try {
