@@ -618,6 +618,78 @@ function validateDiscovery(records, knownIds, definedIds) {
  * 검증
  * ================================================================== */
 
+/**
+ * ELI5 섹션의 **내용**을 본다.
+ *
+ * 섹션 제목만 확인하면 `TODO(owner)` 만 든 껍데기가 통과한다. 그러면 규칙은
+ * 있고 효과는 없는 상태가 된다 — 스킬이 가장 피해야 할 모양이다.
+ *
+ * 못 채운 것은 실패로 잡고(빌드가 막힌다), 문체는 경고로만 둔다.
+ * 문체를 실패로 걸면 기존 문서가 한꺼번에 막혀 아무도 고치지 않는다.
+ */
+function checkEli5(doc, fail, warn) {
+  const cfg = schema.eli5;
+  if (!cfg || !cfg.appliesTo.includes(doc.meta.template)) return;
+  if (!doc.sections.includes(cfg.section)) return;   // 누락은 이미 위에서 잡았다
+
+  const body = sectionBody(doc.body, cfg.section);
+  if (body === null) return;
+
+  if (/TODO\([a-z]+\)/.test(body)) {
+    fail(doc, cfg.section + ": 아직 안 채웠습니다 (TODO 가 남아 있습니다)");
+    return;
+  }
+
+  // 첫 인용줄(`> `)이 곧 한 줄 요약이다.
+  // `\s*` 를 쓰면 줄바꿈까지 먹어 빈 `>` 를 건너뛰고 다음 줄을 요약으로 잡는다.
+  // 가로 공백만 허용한다.
+  const quote = (body.match(/^>[^\S\n]*(.+)$/m) || [])[1];
+  if (!quote || quote.trim().length < 10) {
+    fail(doc, cfg.section + ": 한 줄 요약(`> `)이 비어 있습니다");
+    return;
+  }
+
+  const max = cfg.maxSentenceChars || 60;
+  for (const sentence of quote.split(/(?<=[.?!다])\s+/)) {
+    const t = sentence.trim();
+    if (t.length > max) {
+      warn(doc, cfg.section + ": 한 문장이 " + t.length + "자입니다 (" + max + "자 이내로 끊으세요)");
+      break;
+    }
+  }
+
+  // 약어를 풀지 않고 쓰면 고객이 읽지 못한다
+  const glossed = new Set();
+  for (const m of body.matchAll(/([A-Z]{2,6})\s*\(/g)) glossed.add(m[1]);
+  const bare = new Set();
+  for (const m of body.matchAll(/\b([A-Z]{2,6})\b/g)) {
+    if (!glossed.has(m[1]) && !ELI5_ALLOWED_ACRONYMS.has(m[1])) bare.add(m[1]);
+  }
+  if (bare.size) {
+    warn(doc, cfg.section + ": 약어를 풀어 쓰세요 — " + [...bare].join(", "));
+  }
+
+  for (const key of ["왜 필요한가", "이 문서를 읽어야 하는 사람"]) {
+    if (!body.includes(key)) warn(doc, cfg.section + ": '" + key + "' 가 없습니다");
+  }
+}
+
+/* 굳이 풀지 않아도 되는 약어. 고객도 아는 말이다. */
+const ELI5_ALLOWED_ACRONYMS = new Set([
+  "AI", "IT", "PC", "URL", "PDF", "CSV", "API", "DB", "OK", "QR", "SMS",
+]);
+
+/** `## n. 제목` 아래 다음 `## ` 까지의 본문을 잘라 준다. 없으면 null. */
+function sectionBody(md = "", title) {
+  const lines = md.split("\n");
+  const head = new RegExp("^## (?:\\d+\\.\\s*)?" + title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*$");
+  let i = lines.findIndex((l) => head.test(l));
+  if (i === -1) return null;
+  const out = [];
+  for (i += 1; i < lines.length && !/^## /.test(lines[i]); i += 1) out.push(lines[i]);
+  return out.join("\n").trim();
+}
+
 function validate(docs, extraIds = new Set()) {
   const errors = [];
   const warnings = [];
@@ -680,6 +752,7 @@ function validate(docs, extraIds = new Set()) {
           fail(doc, "필수 섹션 누락: " + required);
         }
       }
+      checkEli5(doc, fail, warn);
     }
   }
 
@@ -1185,7 +1258,9 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
   const mockupArticle = mockups.length
     ? '<article class="doc" data-id="__mockups" data-title="디자인 시안">' +
       '<div class="doc-inner"><div class="doc-body"><h1>디자인 시안</h1>' +
-      '<p class="home-lead">3단계에서 만든 화면 시안입니다. 새 탭에서 열립니다. ' +
+      '<p class="home-lead">글로 적은 설계를 <strong>실제 화면 모양으로 그려 본 것</strong>입니다. ' +
+      "만들기 전에 눈으로 확인하는 단계라, 여기서 고치는 것이 가장 쌉니다. " +
+      '새 탭에서 열립니다.<br>' +
       "규칙과 수정 이력은 왼쪽 <strong>3단계 · 디자인</strong> 메뉴에 있습니다." +
       (styleguide
         ? ' 토큰 견본과 명도비는 <a href="' + styleguide + '" target="_blank" rel="noreferrer">스타일 가이드</a>에서 볼 수 있습니다.'
@@ -1276,7 +1351,9 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
   const linksArticle =
     '<article class="doc" data-id="__links" data-title="연동 서비스"><div class="doc-inner"><div class="doc-body">' +
     "<h1>연동 서비스</h1>" +
-    '<p class="home-lead">이 프로젝트가 밖으로 물려 있는 곳들입니다. ' +
+    '<p class="home-lead">이 프로젝트가 <strong>바깥 서비스와 연결되는 지점</strong>입니다. ' +
+    "결제·메일·지도처럼 우리가 직접 만들지 않고 빌려 쓰는 것들입니다. " +
+    '계정과 비용이 걸리므로 미리 정해 두어야 합니다.<br>' +
     "연결된 카드는 눌러서 바로 이동하고, 아직 안 붙은 카드는 <strong>연동 방법 묻기</strong>를 눌러 " +
     "문구를 복사한 뒤 AI에게 그대로 물어보면 됩니다.</p>" +
     (links.every((l) => l.source === "추천")
@@ -1875,7 +1952,9 @@ function docShape(id = "") {
     '<article class="doc doc-home" data-id="__home" data-title="홈"><div class="doc-inner"><div class="doc-body">' +
     '<div class="home-eyebrow">Project Documentation</div><h1>' +
     escapeHtml(config.project) +
-    '</h1><p class="home-lead">구현 이전에 정립되어야 하는 정의를 모아둔 곳입니다. ' +
+    '</h1><p class="home-lead">코드를 만들기 <strong>전에</strong> 무엇을 만들지 합의한 내용이 모여 있습니다. ' +
+    "집을 짓기 전 도면을 모아 둔 서랍이라고 보면 됩니다. " +
+    "합의가 여기 없으면 만들다가 서로 다른 것을 떠올립니다.<br>" +
     "왼쪽에서 문서를 고르거나 아래 목록에서 시작하세요. " +
     (guideNav ? '처음이라면 <a href="#/__guide">가이드</a>부터 보세요.' : "") +
     "</p>" +
@@ -1927,8 +2006,11 @@ function docShape(id = "") {
   const traceArticle =
     '<article class="doc" data-id="__trace" data-title="추적성 매트릭스"><div class="doc-inner"><div class="doc-body">' +
     "<h1>추적성 매트릭스</h1>" +
-    '<p class="home-lead">요구사항·리스크·결정 ID가 어디서 정의되고 어디서 참조되는지 자동 수집한 표입니다. ' +
-    "참조가 없는 항목은 고아이거나, 아직 후속 문서에 반영되지 않은 것입니다.</p>" +
+    '<p class="home-lead">요구사항·리스크·결정에 붙인 <strong>번호</strong>가 ' +
+    "<strong>어느 문서에서 정해졌고 어느 문서에서 쓰이는지</strong>를 한 표에 모았습니다. " +
+    "책 뒤의 찾아보기(색인)와 같습니다.<br>" +
+    "쓰이는 곳이 비어 있으면, 정하기는 했는데 아직 어느 문서에도 반영하지 않았다는 뜻입니다. " +
+    "그런 항목이 나중에 누락으로 드러납니다.</p>" +
     '<div class="table-wrap"><table><thead><tr><th>ID</th><th>내용</th><th>정의</th><th>참조</th></tr></thead><tbody>' +
     (traceRows || '<tr><td colspan="4" class="muted">수집된 ID가 없습니다</td></tr>') +
     "</tbody></table></div></div></div></article>";
@@ -1982,7 +2064,11 @@ function docShape(id = "") {
     ICON.wide +
     "</button></header>" +
     '<article class="doc" data-id="__search" data-title="검색"><div class="doc-inner">' +
-    '<div class="doc-body"><h1>검색</h1><div id="results"></div></div></div></article>' +
+    '<div class="doc-body"><h1>검색</h1>' +
+    '<p class="home-lead">모든 문서의 본문을 한꺼번에 찾습니다. ' +
+    "어느 문서에 있었는지 기억나지 않을 때 쓰세요. " +
+    "왼쪽 위 검색창에 입력하거나 <kbd>/</kbd> 를 누르면 바로 여기로 옵니다.</p>" +
+    '<div id="results"></div></div></div></article>' +
     guideArticle +
     home +
     linksArticle +
@@ -3828,6 +3914,44 @@ function selftest() {
   assert(msgs.includes("status 값 오류"), "enum violation caught");
   assert(msgs.includes("updated 형식 오류"), "date pattern violation caught");
   assert(msgs.includes("필수 섹션 누락: 미결정"), "required section caught");
+
+  /* ELI5 내용 검증 — 껍데기가 통과하지 않는지 본다 */
+  const eli5Doc = (block) => ({
+    file: "01-x.md",
+    meta: { id: "01-x", title: "T", phase: "01. 상시 · 사업관리", status: "draft",
+            owner: "o", summary: "s", template: "spec", updated: "2026-09-14" },
+    body: "# T\n\n## 1. 한 줄로 말하면\n\n" + block + "\n\n## 2. 미결정\n\n## 3. 변경 이력\n",
+    hasFrontmatter: true,
+    sections: ["한 줄로 말하면", "미결정", "변경 이력"],
+    refs: { wikiLinks: new Set(), defined: new Set(), mentioned: new Set() },
+    id: "01-x",
+  });
+  const eli5Msgs = (block) => {
+    const r = validate([eli5Doc(block)]);
+    return [...r.errors, ...r.warnings].map((e) => e.msg).join(" | ");
+  };
+  assert(
+    eli5Msgs("> TODO(owner) — 채우기").includes("아직 안 채웠습니다"),
+    "ELI5 TODO 껍데기는 실패",
+  );
+  assert(
+    eli5Msgs(">\n\n**왜 필요한가** — 설명.").includes("비어 있습니다"),
+    "ELI5 빈 요약줄은 실패 (줄바꿈을 건너뛰지 않는다)",
+  );
+  const full =
+    "> 계약이 바뀌면 담당자에게 알림이 갑니다.\n\n" +
+    "**왜 필요한가** — 모르고 지나갑니다.\n\n" +
+    "**비유하자면** — 택배 알림과 같습니다.\n\n" +
+    "**이 문서를 읽어야 하는 사람** — 영업팀";
+  assert(eli5Msgs(full) === "", "잘 채운 ELI5 는 조용히 통과");
+  assert(
+    eli5Msgs(full.replace("알림이 갑니다.", "SLA 기준에 맞추어 알림이 갑니다.")).includes("약어를 풀어 쓰세요"),
+    "안 푼 약어는 경고",
+  );
+  assert(
+    !eli5Msgs(full.replace("담당자에게", "담당자 PC 로 API 를 통해")).includes("약어를 풀어 쓰세요"),
+    "통용 약어(PC·API)는 경고하지 않는다",
+  );
   assert(msgs.includes("필수 섹션 누락: 변경 이력"), "required section caught (2)");
   assert(msgs.includes("깨진 참조"), "broken wikilink caught");
   assert(msgs.includes("파일명이 id와 다릅니다"), "filename mismatch caught");
