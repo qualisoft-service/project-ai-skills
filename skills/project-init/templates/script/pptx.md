@@ -15,6 +15,8 @@ __SHAPE__
 
 __FORM__
 
+__CHART__
+
 __PURPOSE__
 
 __SCOPE__
