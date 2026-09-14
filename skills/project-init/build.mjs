@@ -1079,6 +1079,48 @@ function progressClass(percent) {
  * 렌더
  * ================================================================== */
 
+/**
+ * 이 문서가 프로젝트에서 실제로 쓰였는가.
+ *
+ * 기획안을 근거로 메뉴는 만들어졌지만 끝까지 손대지 않는 문서가 생긴다.
+ * 그런 문서를 "작성 중"으로 두면 진행률이 영원히 낮게 깔리고, 무엇이 남은
+ * 일이고 무엇이 애초에 필요 없던 항목인지 구분되지 않는다.
+ *
+ * 판정은 네 신호 중 하나라도 걸리면 '쓰임'이다. 실측하면 갓 만든 문서는
+ * 37~265, 한 번이라도 채운 문서는 996 이상으로 갈라진다.
+ */
+const USAGE_MIN_CHARS = 400;
+
+function docUsed(doc) {
+  // 주 신호는 **내용**이다. 상태나 링크는 템플릿이 만들어 낸 흔적일 수 있다:
+  // log 템플릿은 status 가 approved 로 시작하고, 모든 spec 템플릿은 리스크
+  // 대장으로 가는 링크를 자동으로 건다. 그걸 근거로 삼으면 갓 만든 대장이
+  // 늘 '사용됨'이 된다.
+  if (meaningfulChars(doc.body) >= USAGE_MIN_CHARS) return true;
+
+  // 내용이 적어도 사람이 손댄 흔적이 있으면 사용으로 본다
+  if (doc.meta.template !== "log" && doc.meta.status && doc.meta.status !== "draft") {
+    return true;
+  }
+  const outside = stripCode(doc.body || "");           // 템플릿 예시 ID 는 제외
+  for (const id of doc.refs?.defined || []) {
+    if (outside.includes(id)) return true;
+  }
+  return false;
+}
+
+/** 템플릿 골격(제목·지침·빈 표·TODO)을 뺀 실질 글자 수. */
+function meaningfulChars(body = "") {
+  return body
+    .replace(/^---\n[\s\S]*?\n---\n/, "")
+    .replace(/^#{1,4} .*$/gm, "")
+    .replace(/^\|[\s|:-]*\|\s*$/gm, "")
+    .replace(/TODO\([a-z]+\)/g, "")
+    .replace(/^> .*$/gm, "")
+    .replace(/\|\s*\|/g, "")
+    .replace(/[\s|·—▪•\-*`>]+/g, "").length;
+}
+
 function render(docs, config, trace, discovery = [], design = [], mockups = [], styleguide = null, docsDir = "", build = [], links = []) {
   const byId = new Map([...discovery, ...design, ...docs].map((d) => [d.id, d]));
   const resolveLink = (target) => {
@@ -1098,14 +1140,17 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
     g.docs.push(d);
   }
 
-  const navLink = (id, label, status) =>
-    '<a class="nav-item" data-id="' +
+  const navLink = (id, label, status, used) =>
+    '<a class="nav-item' +
+    (used === false ? " unused" : "") +
+    '" data-id="' +
     id +
+    (used === undefined ? "" : '" data-used="' + (used ? "1" : "0")) +
     '" href="#/' +
     id +
     '"><span class="nav-dot s-' +
     status +
-    '"></span><span>' +
+    '"></span><span class="nav-label">' +
     escapeHtml(label) +
     "</span></a>";
 
@@ -1185,7 +1230,9 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
         escapeHtml(p.name) +
         "</div>" +
         p.docs
-          .map((d) => navLink(d.id, d.meta.title || d.id, d.meta.status || "draft"))
+          .map((d) =>
+            navLink(d.id, d.meta.title || d.id, d.meta.status || "draft", docUsed(d)),
+          )
           .join("") +
         "</div>",
     )
@@ -1248,35 +1295,40 @@ function render(docs, config, trace, discovery = [], design = [], mockups = [], 
     escapeHtml(LINK_ADD_PROMPT) + '">추가 문의 문구 복사</button></div></div>' +
     "</div></div></div></article>";
 
-  /* 내보내기 스크립트 템플릿.
+  /* 산출물 대본.
  *
- * 스크립트는 원본 .md 를 **실행할 때마다 다시 읽는다.** 내용을 스크립트에
- * 박아 넣지 않으므로, 문서를 고친 뒤 같은 스크립트를 다시 돌리면 최신 내용이
- * 나온다. HTML 크기도 문서 수와 무관하게 일정하다. */
-const EXPORT_FORMATS = [
-  { id: "pdf",   label: "PDF",              ext: "pdf",  install: "pip install reportlab" },
-  { id: "excel", label: "Excel (XLSX)",     ext: "xlsx", install: "pip install openpyxl" },
-  { id: "pptx",  label: "PowerPoint (PPTX)", ext: "pptx", install: "pip install python-pptx" },
-  { id: "docx",  label: "Word (DOCX)",      ext: "docx", install: "pip install python-docx" },
-  { id: "csv",   label: "CSV",              ext: "csv",  install: "" },
+ * 코드가 아니라 **AI 에게 주는 지시문**이다. 복사해서 에이전트에 붙여 넣으면
+ * 그 형식으로 산출물을 만든다. 서식 규격(`_style.md`)이 대본 안에 박혀 있으므로
+ * 착수 때 만들든 중간에 만들든, 누가 어떤 도구로 만들든 같은 모양이 나온다.
+ *
+ * 대본은 원본 .md 경로만 가리킨다. 내용을 품지 않으므로 문서를 고친 뒤 같은
+ * 대본을 다시 쓰면 최신 내용으로 만들어진다. HTML 크기도 문서 수와 무관하다. */
+const SCRIPT_FORMATS = [
+  { id: "pdf",   label: "PDF",               ext: "pdf" },
+  { id: "excel", label: "Excel (XLSX)",      ext: "xlsx" },
+  { id: "pptx",  label: "PowerPoint (PPTX)", ext: "pptx" },
+  { id: "docx",  label: "Word (DOCX)",       ext: "docx" },
+  { id: "csv",   label: "CSV",               ext: "csv" },
 ];
 
-function loadExportScripts() {
-  const dir = join(SKILL_DIR, "templates", "export");
-  const parserPath = join(dir, "_parser.py");
-  if (!existsSync(parserPath)) return null;
-  const parser = readFileSync(parserPath, "utf8");
+function loadScripts(project) {
+  const dir = join(SKILL_DIR, "templates", "script");
+  const stylePath = join(dir, "_style.md");
+  if (!existsSync(stylePath)) return null;
+  const style = readFileSync(stylePath, "utf8").trim();
   const out = {};
-  for (const f of EXPORT_FORMATS) {
-    const path = join(dir, f.id + ".py");
+  for (const f of SCRIPT_FORMATS) {
+    const path = join(dir, f.id + ".md");
     if (!existsSync(path)) continue;
-    out[f.id] = readFileSync(path, "utf8").replace("__PARSER__", parser);
+    out[f.id] = readFileSync(path, "utf8")
+      .replace("__STYLE__", style)
+      .split("__PROJECT__").join(project || "이");
   }
   return Object.keys(out).length ? out : null;
 }
 
 /* --- 문서 본문 (1단계 기록 + 2단계 문서) --- */
-  const exportScripts = loadExportScripts();
+  const scripts = loadScripts(config.project);
   const searchIndex = [];
   const articles = [...discovery, ...design, ...docs]
     .map((d) => {
@@ -1595,6 +1647,11 @@ function loadExportScripts() {
     '<span class="search-icon">' + ICON.search + "</span>" +
     '<input id="search" type="search" placeholder="문서 검색" autocomplete="off" spellcheck="false">' +
     '<kbd class="search-kbd">/</kbd></div></div>' +
+    '<div class="nav-tools">' +
+    '<label class="nav-toggle"><input type="checkbox" id="inactiveMode">' +
+    '<span>비활성 관리</span></label>' +
+    '<span class="nav-count" id="inactiveCount"></span>' +
+    "</div>" +
     '<div class="nav" id="nav">' +
     guideNav +
     navLink("__home", "홈", "home") +
@@ -1625,31 +1682,32 @@ function loadExportScripts() {
     traceArticle +
     articles +
     "</main>" +
-    (exportScripts
+    (scripts
       ? '<div class="modal" id="exportModal" hidden>' +
         '<div class="modal-back" data-close-export></div>' +
         '<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportTitle">' +
         '<div class="modal-head">' +
-        '<div><div class="modal-title" id="exportTitle">파일 스크립트</div>' +
+        '<div><div class="modal-title" id="exportTitle">파일 스크립트 — 산출물 생성 대본</div>' +
         '<div class="modal-sub" id="exportSub"></div></div>' +
         '<button class="icon-btn" type="button" data-close-export aria-label="닫기">\u2715</button>' +
         "</div>" +
         '<div class="modal-bar">' +
         '<label class="modal-label" for="exportFormat">형식</label>' +
         '<select class="modal-select" id="exportFormat">' +
-        EXPORT_FORMATS.filter((f) => exportScripts[f.id])
+        SCRIPT_FORMATS.filter((f) => scripts[f.id])
           .map((f) => '<option value="' + f.id + '">' + f.label + "</option>")
           .join("") +
         "</select>" +
         '<span class="modal-install" id="exportInstall"></span>' +
-        '<button class="modal-copy" type="button" id="exportCopy">스크립트 복사</button>' +
+        '<button class="modal-copy" type="button" id="exportCopy">대본 복사</button>' +
         "</div>" +
         '<div class="modal-body"><pre class="modal-code" id="exportCode"></pre></div>' +
-        '<div class="modal-foot">원본 <span class="mono" id="exportFile"></span> 을 실행할 때마다 다시 읽습니다. ' +
-        "문서를 고친 뒤 같은 스크립트를 돌리면 최신 내용이 나옵니다." +
+        '<div class="modal-foot">복사해서 AI 에게 그대로 붙여 넣으면 됩니다. ' +
+        '대본은 원본 <span class="mono" id="exportFile"></span> 을 가리킬 뿐 내용을 품지 않으므로, ' +
+        "문서를 고친 뒤 같은 대본을 다시 써도 최신 내용으로 만들어집니다." +
         "</div></div></div>" +
         '<script id="exportScripts" type="application/json">' +
-        JSON.stringify({ scripts: exportScripts, formats: EXPORT_FORMATS })
+        JSON.stringify({ scripts: scripts, formats: SCRIPT_FORMATS })
           .replace(/</g, "\\u003c") +
         "<\/script>"
       : "") +
@@ -1734,6 +1792,36 @@ const CSS = `
   .modal-copy{margin-left:0}
   .modal-code{font-size:11px}
 }
+
+/* ── 비활성 메뉴 ─────────────────────────────────────────── */
+.nav-tools{display:flex; align-items:center; gap:8px; padding:2px 14px 8px}
+.nav-toggle{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  font-size:11.5px; color:var(--tx-faint); user-select:none}
+.nav-toggle input{width:12px; height:12px; margin:0; cursor:pointer; accent-color:var(--accent)}
+.nav-toggle:hover{color:var(--tx-dim)}
+.nav-count{margin-left:auto; font-size:10.5px; color:var(--tx-faint); font-variant-numeric:tabular-nums}
+/* 한 번도 쓰이지 않은 메뉴 — 노란 점이 아니라 검정 점으로 죽여 둔다 */
+.nav-item.unused .nav-dot,
+.nav-group.p-yellow .nav-item.unused .nav-dot,
+.nav-group.p-red .nav-item.unused .nav-dot,
+.nav-group.p-orange .nav-item.unused .nav-dot,
+.nav-group.p-green .nav-item.unused .nav-dot,
+.nav-group.p-gray .nav-item.unused .nav-dot{
+  background:#000; box-shadow:0 0 0 1px var(--line-strong)}
+[data-theme=dark] .nav-item.unused .nav-dot,
+[data-theme=dark] .nav-group .nav-item.unused .nav-dot{
+  background:#000; box-shadow:0 0 0 1px rgba(255,255,255,.22)}
+.nav-item.unused .nav-label{color:var(--tx-faint)}
+.nav-item.unused:hover .nav-label{color:var(--tx-dim)}
+/* 관리 모드 */
+body.inactive-mode .nav-item{position:relative; padding-left:30px}
+body.inactive-mode .nav-item .nav-dot{position:absolute; left:18px}
+.nav-check{position:absolute; left:7px; top:50%; transform:translateY(-50%);
+  width:12px; height:12px; margin:0; cursor:pointer; accent-color:var(--accent);
+  display:none}
+body.inactive-mode .nav-check{display:block}
+body.inactive-mode .nav-tools{background:var(--hover); border-radius:7px;
+  margin:0 6px 6px; padding:6px 8px}
 html{-webkit-text-size-adjust:100%}
 body{
   margin:0; background:var(--bg); color:var(--tx);
@@ -2088,6 +2176,90 @@ const JS = `
   });
 
 
+
+  /* ── 비활성 메뉴 관리 ────────────────────────────
+   * 자동 판정(data-used=0)이 기본이고, 사용자가 체크로 덮어쓴다.
+   * index.html 은 빌드마다 새로 만들어지므로 덮어쓴 값은 문서 id 로
+   * localStorage 에 둔다 — 다시 빌드해도 유지된다. */
+  (function(){
+    var box = document.getElementById('inactiveMode');
+    var nav = document.getElementById('nav');
+    var count = document.getElementById('inactiveCount');
+    if(!box || !nav) return;
+    var KEY = 'inactiveDocs';
+
+    function load(){
+      try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+      catch(e){ return {}; }
+    }
+    function save(map){
+      try { localStorage.setItem(KEY, JSON.stringify(map)); } catch(e){}
+    }
+
+    var overrides = load();
+    var items = [].slice.call(nav.querySelectorAll('.nav-item[data-used]'));
+
+    function isInactive(item){
+      var id = item.getAttribute('data-id');
+      if(Object.prototype.hasOwnProperty.call(overrides, id)) return !!overrides[id];
+      return item.getAttribute('data-used') === '0';
+    }
+
+    function paint(){
+      var n = 0;
+      items.forEach(function(item){
+        var off = isInactive(item);
+        item.classList.toggle('unused', off);
+        var cb = item.querySelector('.nav-check');
+        if(cb) cb.checked = off;
+        if(off) n++;
+      });
+      count.textContent = n ? ('비활성 ' + n + ' / ' + items.length) : '';
+    }
+
+    // 관리 모드에서 쓸 체크박스를 미리 넣어 둔다 (CSS 로 보였다 숨긴다)
+    items.forEach(function(item){
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'nav-check';
+      cb.title = '비활성으로 표시';
+      item.insertBefore(cb, item.firstChild);
+    });
+
+    /* 체크박스가 <a> 안에 있어 클릭이 그대로 두면 문서 이동까지 간다.
+     * 문서 캡처 단계에서 먼저 가로채 라우터보다 앞서 끊는다. */
+    document.addEventListener('click', function(e){
+      var cb = e.target;
+      if(!cb.classList || !cb.classList.contains('nav-check')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+      var item = cb.closest('.nav-item');
+      if(!item) return;
+      var id = item.getAttribute('data-id');
+      var next = !isInactive(item);
+      var auto = item.getAttribute('data-used') === '0';
+      // 자동 판정과 같아지면 덮어쓰기를 지운다 — 쓸데없는 저장을 남기지 않는다
+      if(next === auto) delete overrides[id];
+      else overrides[id] = next;
+      save(overrides);
+      paint();
+    }, true);
+
+    box.addEventListener('change', function(){
+      document.body.classList.toggle('inactive-mode', box.checked);
+      try { localStorage.setItem('inactiveMode', box.checked ? '1' : ''); } catch(e){}
+    });
+    try {
+      if(localStorage.getItem('inactiveMode')){
+        box.checked = true;
+        document.body.classList.add('inactive-mode');
+      }
+    } catch(e){}
+
+    paint();
+  })();
+
   /* ── 파일 스크립트 모달 ──────────────────────────── */
   (function(){
     var node = document.getElementById('exportScripts');
@@ -2116,7 +2288,7 @@ const JS = `
         .split('__DOC_FILE__').join(cur.file)
         .split('__DOC_TITLE__').join(cur.title)
         .split('__DOC_STEM__').join(stem(cur.file));
-      install.textContent = f.install || '설치할 것 없음 — 표준 라이브러리';
+      install.textContent = stem(cur.file) + '.' + f.ext;
       try { localStorage.setItem('exportFormat', f.id); } catch(e){}
     }
 
